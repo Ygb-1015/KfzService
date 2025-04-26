@@ -85,6 +85,11 @@ public class ShopVo {
      */
     private Long startUpdatedAt;
 
+    /**
+     * 创建人
+     */
+    private Long createBy;
+
     public Long getId() {
         return id;
     }
@@ -203,5 +208,13 @@ public class ShopVo {
 
     public void setStartUpdatedAt(Long startUpdatedAt) {
         this.startUpdatedAt = startUpdatedAt;
+    }
+
+    public Long getCreateBy() {
+        return createBy;
+    }
+
+    public void setCreateBy(Long createBy) {
+        this.createBy = createBy;
     }
 }

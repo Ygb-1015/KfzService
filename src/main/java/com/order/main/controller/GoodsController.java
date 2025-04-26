@@ -15,8 +15,9 @@ public class GoodsController {
 
 
     @GetMapping("/synchronizationGoods")
-    public String synchronizationGoods(Long shopId){
+    public Boolean synchronizationGoods(Long shopId){
         return goodsService.synchronizationGoods(shopId);
     }
+
 
 }
