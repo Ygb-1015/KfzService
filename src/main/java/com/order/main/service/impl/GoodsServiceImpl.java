@@ -3,10 +3,9 @@ package com.order.main.service.impl;
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSONObject;
-import com.order.main.dto.requst.GetShopGoodsListRequest;
-import com.order.main.dto.requst.GoodsComparisonRequest;
-import com.order.main.dto.requst.ZhishuShopGoodsRequest;
+import com.order.main.dto.requst.*;
 import com.order.main.dto.response.GetShopGoodsListResponse;
+import com.order.main.dto.response.ItemItemsnUpdateResponse;
 import com.order.main.dto.response.KfzBaseResponse;
 import com.order.main.dto.response.ShopVo;
 import com.order.main.service.GoodsService;
@@ -93,11 +92,11 @@ public class GoodsServiceImpl implements GoodsService {
             KfzBaseResponse<GetShopGoodsListResponse> shopGoodsResponse = phpClient.getShopGoodsList(ClientConstantUtils.PHP_URL, getShopGoodsListRequest);
             log.info("查询孔夫子店铺商品响应-{}", JSONObject.toJSONString(shopGoodsResponse));
             if (!isRefreshToken && ObjectUtil.isNotEmpty(shopGoodsResponse.getErrorResponse())) {
-                List<String> tokenErrorCode = new ArrayList<>();
-                tokenErrorCode.add("1000");
-                tokenErrorCode.add("1001");
-                tokenErrorCode.add("2000");
-                tokenErrorCode.add("2001");
+                List<Long> tokenErrorCode = new ArrayList<>();
+                tokenErrorCode.add(1000L);
+                tokenErrorCode.add(1001L);
+                tokenErrorCode.add(2000L);
+                tokenErrorCode.add(2001L);
                 if (tokenErrorCode.contains(shopGoodsResponse.getErrorResponse().getCode())) {
                     token = tokenUtils.refreshToken(refreshToken, shopId);
                     isRefreshToken = true;
@@ -116,5 +115,37 @@ public class GoodsServiceImpl implements GoodsService {
             }
         }
         return shopGoodsList;
+    }
+
+    @Override
+    public Boolean updateArtNo(UpdateArtNoRequest request) {
+        // 根据店铺Id查询店铺信息
+        ShopVo shopInfo = erpClient.getShopInfo(ClientConstantUtils.ERP_URL, request.getShopId());
+        Assert.isTrue(ObjectUtil.isNotEmpty(shopInfo), "查询不到店铺信息");
+        String token = shopInfo.getToken();
+        String refreshToken = shopInfo.getRefreshToken();
+        for (int i = 0; i < 2; i++) {
+            ItemItemsnUpdateRequest updateRequest = new ItemItemsnUpdateRequest();
+            updateRequest.setToken(token);
+            updateRequest.setItemId(request.getProductId());
+            updateRequest.setItemSn(request.getArtNo());
+            KfzBaseResponse<ItemItemsnUpdateResponse> response = phpClient.itemItemsnUpdate(ClientConstantUtils.PHP_URL, updateRequest);
+            if (ObjectUtil.isNotEmpty(response.getErrorResponse())) {
+                List<Long> tokenErrorCode = new ArrayList<>();
+                tokenErrorCode.add(1000L);
+                tokenErrorCode.add(1001L);
+                tokenErrorCode.add(2000L);
+                tokenErrorCode.add(2001L);
+                if (tokenErrorCode.contains(response.getErrorResponse().getCode())) {
+                    token = tokenUtils.refreshToken(refreshToken, request.getShopId());
+                } else {
+                    throw new RuntimeException("更新孔夫子商品货号异常-" + JSONObject.toJSONString(response));
+                }
+            } else {
+                Assert.isTrue(ObjectUtil.isNotEmpty(response.getSuccessResponse()), "更新孔夫子商品货号异常-" + JSONObject.toJSONString(response));
+                i++;
+            }
+        }
+        return true;
     }
 }

@@ -12,95 +12,52 @@ public class KfzBaseResponse<T> {
     private T successResponse;
 
     // 请求失败返回的错误信息
-    private ErrorResponse errorResponse;
+    public ErrorResponse errorResponse;
+
+    // Getter 和 Setter 方法
 
     public static class ErrorResponse {
-
         // 请求失败返回的错误码
-        private String code;
+        private Long code;
 
         // 请求失败返回的错误信息
         private String msg;
 
         // 请求失败返回的子错误码
-        private String subCode;
+        private Long subCode;
 
         // 请求失败返回的子错误信息
         private String subMsg;
 
-        // data
-        private String data;
+        // data (假设不需要此字段)
+        // private String data;
 
-        public String getCode() {
-            return code;
-        }
+        // Getter 和 Setter 方法
+        public Long getCode() { return code; }
+        public void setCode(Long code) { this.code = code; }
 
-        public void setCode(String code) {
-            this.code = code;
-        }
+        public String getMsg() { return msg; }
+        public void setMsg(String msg) { this.msg = msg; }
 
-        public String getMsg() {
-            return msg;
-        }
+        public Long getSubCode() { return subCode; }
+        public void setSubCode(Long subCode) { this.subCode = subCode; }
 
-        public void setMsg(String msg) {
-            this.msg = msg;
-        }
+        public String getSubMsg() { return subMsg; }
+        public void setSubMsg(String subMsg) { this.subMsg = subMsg; }
 
-        public String getSubCode() {
-            return subCode;
-        }
-
-        public void setSubCode(String subCode) {
-            this.subCode = subCode;
-        }
-
-        public String getSubMsg() {
-            return subMsg;
-        }
-
-        public void setSubMsg(String subMsg) {
-            this.subMsg = subMsg;
-        }
-
-        public String getData() {
-            return data;
-        }
-
-        public void setData(String data) {
-            this.data = data;
-        }
+        // 如果需要data字段，请添加其getter和setter方法
     }
 
-    public String getRequestId() {
-        return requestId;
-    }
+    // Getter 和 Setter 方法
+    public String getRequestId() { return requestId; }
+    public void setRequestId(String requestId) { this.requestId = requestId; }
 
-    public void setRequestId(String requestId) {
-        this.requestId = requestId;
-    }
+    public String getRequestMethod() { return requestMethod; }
+    public void setRequestMethod(String requestMethod) { this.requestMethod = requestMethod; }
 
-    public String getRequestMethod() {
-        return requestMethod;
-    }
+    public T getSuccessResponse() { return successResponse; }
+    public void setSuccessResponse(T successResponse) { this.successResponse = successResponse; }
 
-    public void setRequestMethod(String requestMethod) {
-        this.requestMethod = requestMethod;
-    }
-
-    public T getSuccessResponse() {
-        return successResponse;
-    }
-
-    public void setSuccessResponse(T successResponse) {
-        this.successResponse = successResponse;
-    }
-
-    public ErrorResponse getErrorResponse() {
-        return errorResponse;
-    }
-
-    public void setErrorResponse(ErrorResponse errorResponse) {
-        this.errorResponse = errorResponse;
-    }
+    public ErrorResponse getErrorResponse() { return errorResponse; }
+    public void setErrorResponse(ErrorResponse errorResponse) { this.errorResponse = errorResponse; }
 }
