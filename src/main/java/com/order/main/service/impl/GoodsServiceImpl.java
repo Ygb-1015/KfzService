@@ -3,6 +3,7 @@ package com.order.main.service.impl;
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSONObject;
+import com.dtflys.forest.exceptions.ForestNetworkException;
 import com.order.main.dto.requst.*;
 import com.order.main.dto.response.GetShopGoodsListResponse;
 import com.order.main.dto.response.ItemItemsnUpdateResponse;
@@ -62,6 +63,7 @@ public class GoodsServiceImpl implements GoodsService {
                 zhishuShopGoodsRequest.setItemNumber(shopGoods.getItemId().toString());
                 zhishuShopGoodsRequest.setFixPrice(shopGoods.getOriPrice());
                 zhishuShopGoodsRequest.setInventory(shopGoods.getNumber());
+                zhishuShopGoodsRequest.setBookPic("https://www0.kfzimg.com/" + shopGoods.getImgUrl());
                 // zhishuShopGoodsBo.setIsArtNoConversion(1);
                 return zhishuShopGoodsRequest;
             }).collect(Collectors.toList());
@@ -129,21 +131,26 @@ public class GoodsServiceImpl implements GoodsService {
             updateRequest.setToken(token);
             updateRequest.setItemId(request.getProductId());
             updateRequest.setItemSn(request.getArtNo());
-            KfzBaseResponse<ItemItemsnUpdateResponse> response = phpClient.itemItemsnUpdate(ClientConstantUtils.PHP_URL, updateRequest);
-            if (ObjectUtil.isNotEmpty(response.getErrorResponse())) {
-                List<Long> tokenErrorCode = new ArrayList<>();
-                tokenErrorCode.add(1000L);
-                tokenErrorCode.add(1001L);
-                tokenErrorCode.add(2000L);
-                tokenErrorCode.add(2001L);
-                if (tokenErrorCode.contains(response.getErrorResponse().getCode())) {
-                    token = tokenUtils.refreshToken(refreshToken, request.getShopId());
+            KfzBaseResponse<ItemItemsnUpdateResponse> response = new KfzBaseResponse<>();
+            try {
+                response = phpClient.itemItemsnUpdate(ClientConstantUtils.PHP_URL, updateRequest);
+                if (ObjectUtil.isNotEmpty(response.getErrorResponse())) {
+                    List<Long> tokenErrorCode = new ArrayList<>();
+                    tokenErrorCode.add(1000L);
+                    tokenErrorCode.add(1001L);
+                    tokenErrorCode.add(2000L);
+                    tokenErrorCode.add(2001L);
+                    if (tokenErrorCode.contains(response.getErrorResponse().getCode())) {
+                        token = tokenUtils.refreshToken(refreshToken, request.getShopId());
+                    } else {
+                        throw new RuntimeException("更新孔夫子商品货号异常-" + JSONObject.toJSONString(response));
+                    }
                 } else {
-                    throw new RuntimeException("更新孔夫子商品货号异常-" + JSONObject.toJSONString(response));
+                    Assert.isTrue(ObjectUtil.isNotEmpty(response.getSuccessResponse()), "更新孔夫子商品货号异常-" + JSONObject.toJSONString(response));
+                    i++;
                 }
-            } else {
-                Assert.isTrue(ObjectUtil.isNotEmpty(response.getSuccessResponse()), "更新孔夫子商品货号异常-" + JSONObject.toJSONString(response));
-                i++;
+            } catch (ForestNetworkException e) {
+                throw new ForestNetworkException(e.getMessage(), e.getStatusCode(), e.getResponse());
             }
         }
         return true;
