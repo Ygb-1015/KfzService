@@ -50,7 +50,7 @@ public class GoodsServiceImpl implements GoodsService {
             List<GetShopGoodsListResponse.ShopGoods> shopGoodsList = queryShopGoods(shopInfo.getToken(), shopInfo.getRefreshToken(), shopId);
             List<ZhishuShopGoodsRequest> zhishuShopGoodsRequestList = shopGoodsList.stream().map(shopGoods -> {
                 ZhishuShopGoodsRequest zhishuShopGoodsRequest = new ZhishuShopGoodsRequest();
-                zhishuShopGoodsRequest.setUserId(shopInfo.getCreateBy());
+                zhishuShopGoodsRequest.setUserId(shopInfo.getCreateBy().toString());
                 zhishuShopGoodsRequest.setProductId(shopGoods.getItemId().toString());
                 zhishuShopGoodsRequest.setGoodsName(shopGoods.getItemName());
                 zhishuShopGoodsRequest.setIsbn(shopGoods.getIsbn());
