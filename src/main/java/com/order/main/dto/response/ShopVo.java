@@ -1,5 +1,7 @@
 package com.order.main.dto.response;
 
+import lombok.Data;
+
 import java.util.Date;
 
 /**
@@ -8,6 +10,7 @@ import java.util.Date;
  * @author yxy
  * @date 2025-03-10
  */
+@Data
 public class ShopVo {
 
     /**
@@ -90,131 +93,4 @@ public class ShopVo {
      */
     private Long createBy;
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public Long getMallId() {
-        return mallId;
-    }
-
-    public void setMallId(Long mallId) {
-        this.mallId = mallId;
-    }
-
-    public String getShopType() {
-        return shopType;
-    }
-
-    public void setShopType(String shopType) {
-        this.shopType = shopType;
-    }
-
-    public String getShopGroup() {
-        return shopGroup;
-    }
-
-    public void setShopGroup(String shopGroup) {
-        this.shopGroup = shopGroup;
-    }
-
-    public String getShopName() {
-        return shopName;
-    }
-
-    public void setShopName(String shopName) {
-        this.shopName = shopName;
-    }
-
-    public String getShopAliasName() {
-        return shopAliasName;
-    }
-
-    public void setShopAliasName(String shopAliasName) {
-        this.shopAliasName = shopAliasName;
-    }
-
-    public String getShopAuthorize() {
-        return shopAuthorize;
-    }
-
-    public void setShopAuthorize(String shopAuthorize) {
-        this.shopAuthorize = shopAuthorize;
-    }
-
-    public Date getExpirationTime() {
-        return expirationTime;
-    }
-
-    public void setExpirationTime(Date expirationTime) {
-        this.expirationTime = expirationTime;
-    }
-
-    public Date getAddTime() {
-        return addTime;
-    }
-
-    public void setAddTime(Date addTime) {
-        this.addTime = addTime;
-    }
-
-    public String getShopKey() {
-        return shopKey;
-    }
-
-    public void setShopKey(String shopKey) {
-        this.shopKey = shopKey;
-    }
-
-    public String getToken() {
-        return token;
-    }
-
-    public void setToken(String token) {
-        this.token = token;
-    }
-
-    public String getRefreshToken() {
-        return refreshToken;
-    }
-
-    public void setRefreshToken(String refreshToken) {
-        this.refreshToken = refreshToken;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public String getTenant_id() {
-        return tenant_id;
-    }
-
-    public void setTenant_id(String tenant_id) {
-        this.tenant_id = tenant_id;
-    }
-
-    public Long getStartUpdatedAt() {
-        return startUpdatedAt;
-    }
-
-    public void setStartUpdatedAt(Long startUpdatedAt) {
-        this.startUpdatedAt = startUpdatedAt;
-    }
-
-    public Long getCreateBy() {
-        return createBy;
-    }
-
-    public void setCreateBy(Long createBy) {
-        this.createBy = createBy;
-    }
 }

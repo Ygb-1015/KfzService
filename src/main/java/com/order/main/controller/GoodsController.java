@@ -14,23 +14,24 @@ public class GoodsController {
 
     /**
      * 同步拉取孔夫子商品
+     *
      * @param shopId
      * @return
      */
     @GetMapping("/synchronizationGoods")
-    public Boolean synchronizationGoods(Long shopId){
+    public Boolean synchronizationGoods(Long shopId) {
         return goodsService.synchronizationGoods(shopId);
     }
 
     /**
      * 更新商品货号
+     *
      * @param request
      * @return
      */
     @PostMapping("/updateArtNo")
-    public Boolean updateArtNo(@RequestBody UpdateArtNoRequest request){
+    public Boolean updateArtNo(@RequestBody UpdateArtNoRequest request) {
         return goodsService.updateArtNo(request);
     }
-
 
 }

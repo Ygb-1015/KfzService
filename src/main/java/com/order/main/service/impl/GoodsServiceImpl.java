@@ -13,6 +13,7 @@ import com.order.main.service.GoodsService;
 import com.order.main.service.client.ErpClient;
 import com.order.main.service.client.PhpClient;
 import com.order.main.util.ClientConstantUtils;
+import com.order.main.util.RedisUtils;
 import com.order.main.util.ThreadPoolUtils;
 import com.order.main.util.TokenUtils;
 import org.slf4j.Logger;
@@ -21,6 +22,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -41,13 +44,25 @@ public class GoodsServiceImpl implements GoodsService {
     @Autowired
     private TokenUtils tokenUtils;
 
+    @Autowired
+    private RedisUtils redisUtils;
+    ;
+
     @Override
     public Boolean synchronizationGoods(Long shopId) {
         // 根据店铺Id查询店铺信息
         ShopVo shopInfo = erpClient.getShopInfo(ClientConstantUtils.ERP_URL, shopId);
         Assert.isTrue(ObjectUtil.isNotEmpty(shopInfo), "查询不到店铺信息");
+        // 获取当前时间
+        LocalDateTime now = LocalDateTime.now();
+        // 定义格式：YYYY-MM-DD HH:mm:ss
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        // 格式化当前时间
+        String currentDateTime = now.format(formatter);
+        // 从Redis中获取上次同步时间
+        String lastGoodsSynTime = (String) redisUtils.getCacheObject("lastGoodsSynTime_" + shopInfo.getId());
         ThreadPoolUtils.execute(() -> {
-            List<GetShopGoodsListResponse.ShopGoods> shopGoodsList = queryShopGoods(shopInfo.getToken(), shopInfo.getRefreshToken(), shopId);
+            List<GetShopGoodsListResponse.ShopGoods> shopGoodsList = queryShopGoods(shopInfo.getToken(), shopInfo.getRefreshToken(), shopId, lastGoodsSynTime);
             List<ZhishuShopGoodsRequest> zhishuShopGoodsRequestList = shopGoodsList.stream().map(shopGoods -> {
                 ZhishuShopGoodsRequest zhishuShopGoodsRequest = new ZhishuShopGoodsRequest();
                 zhishuShopGoodsRequest.setUserId(shopInfo.getCreateBy().toString());
@@ -72,12 +87,13 @@ public class GoodsServiceImpl implements GoodsService {
             request.setUserId(shopInfo.getCreateBy());
             request.setZhishuShopGoodsRequestList(zhishuShopGoodsRequestList);
             erpClient.goodsComparison(ClientConstantUtils.ERP_URL, request);
+            redisUtils.setCacheObject("lastGoodsSynTime_" + shopInfo.getId(), currentDateTime);
         });
 
         return true;
     }
 
-    public List<GetShopGoodsListResponse.ShopGoods> queryShopGoods(String token, String refreshToken, Long shopId) {
+    public List<GetShopGoodsListResponse.ShopGoods> queryShopGoods(String token, String refreshToken, Long shopId, String lastGoodsSynTime) {
         Boolean isHaveNext = true;
         Integer pageNum = 1;
         List<GetShopGoodsListResponse.ShopGoods> shopGoodsList = new ArrayList<>();
@@ -90,6 +106,10 @@ public class GoodsServiceImpl implements GoodsService {
             getShopGoodsListRequest.setToken(token);
             getShopGoodsListRequest.setPageNum(pageNum);
             getShopGoodsListRequest.setPageSize(100);
+            // 判断是不是第一次，不是拼接上次同步时间作为筛选条件
+            if (ObjectUtil.isNotNull(lastGoodsSynTime)) {
+                getShopGoodsListRequest.setAddTimeBegin(lastGoodsSynTime);
+            }
 
             KfzBaseResponse<GetShopGoodsListResponse> shopGoodsResponse = phpClient.getShopGoodsList(ClientConstantUtils.PHP_URL, getShopGoodsListRequest);
             log.info("查询孔夫子店铺商品响应-{}", JSONObject.toJSONString(shopGoodsResponse));
