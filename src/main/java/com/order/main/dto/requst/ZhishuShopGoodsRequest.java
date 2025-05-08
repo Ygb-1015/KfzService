@@ -1,11 +1,14 @@
 package com.order.main.dto.requst;
 
+import lombok.Data;
+
 /**
  * 商品信息业务对象 zhishu_shop_goods
  *
  * @author Lion Li
  * @date 2025-03-07
  */
+@Data
 public class ZhishuShopGoodsRequest {
 
     /**
@@ -98,147 +101,4 @@ public class ZhishuShopGoodsRequest {
      */
     private Integer isArtNoConversion;
 
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public String getUserId() {
-        return userId;
-    }
-
-    public void setUserId(String userId) {
-        this.userId = userId;
-    }
-
-    public String getTenantId() {
-        return tenantId;
-    }
-
-    public void setTenantId(String tenantId) {
-        this.tenantId = tenantId;
-    }
-
-    public String getProductId() {
-        return productId;
-    }
-
-    public void setProductId(String productId) {
-        this.productId = productId;
-    }
-
-    public String getGoodsName() {
-        return goodsName;
-    }
-
-    public void setGoodsName(String goodsName) {
-        this.goodsName = goodsName;
-    }
-
-    public String getIsbn() {
-        return isbn;
-    }
-
-    public void setIsbn(String isbn) {
-        this.isbn = isbn;
-    }
-
-    public String getArtNo() {
-        return artNo;
-    }
-
-    public void setArtNo(String artNo) {
-        this.artNo = artNo;
-    }
-
-    public Long getStock() {
-        return stock;
-    }
-
-    public void setStock(Long stock) {
-        this.stock = stock;
-    }
-
-    public Long getPrice() {
-        return price;
-    }
-
-    public void setPrice(Long price) {
-        this.price = price;
-    }
-
-    public Integer getConditionCode() {
-        return conditionCode;
-    }
-
-    public void setConditionCode(Integer conditionCode) {
-        this.conditionCode = conditionCode;
-    }
-
-    public String getRemark() {
-        return remark;
-    }
-
-    public void setRemark(String remark) {
-        this.remark = remark;
-    }
-
-    public String getDelFlag() {
-        return delFlag;
-    }
-
-    public void setDelFlag(String delFlag) {
-        this.delFlag = delFlag;
-    }
-
-    public Long getCreateBy() {
-        return createBy;
-    }
-
-    public void setCreateBy(Long createBy) {
-        this.createBy = createBy;
-    }
-
-    public String getItemNumber() {
-        return itemNumber;
-    }
-
-    public void setItemNumber(String itemNumber) {
-        this.itemNumber = itemNumber;
-    }
-
-    public Long getFixPrice() {
-        return fixPrice;
-    }
-
-    public void setFixPrice(Long fixPrice) {
-        this.fixPrice = fixPrice;
-    }
-
-    public Integer getInventory() {
-        return inventory;
-    }
-
-    public void setInventory(Integer inventory) {
-        this.inventory = inventory;
-    }
-
-    public String getBookPic() {
-        return bookPic;
-    }
-
-    public void setBookPic(String bookPic) {
-        this.bookPic = bookPic;
-    }
-
-    public Integer getIsArtNoConversion() {
-        return isArtNoConversion;
-    }
-
-    public void setIsArtNoConversion(Integer isArtNoConversion) {
-        this.isArtNoConversion = isArtNoConversion;
-    }
 }
