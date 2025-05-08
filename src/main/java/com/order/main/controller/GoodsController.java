@@ -1,9 +1,25 @@
 package com.order.main.controller;
 
+import com.dtflys.forest.annotation.Get;
+import com.order.main.dto.requst.GoodsItemAddRequest;
 import com.order.main.dto.requst.UpdateArtNoRequest;
+import com.order.main.dto.response.ItemItemAddResponse;
+import com.order.main.dto.response.KfzBaseResponse;
 import com.order.main.service.GoodsService;
+import com.order.main.service.client.PhpClient;
+import com.order.main.threads.KongfzTaskRunnable;
+import com.order.main.util.ClientConstantUtils;
+import com.order.main.util.EasyExcelUtil;
+import com.order.main.util.UrlUtil;
+import com.pdd.pop.sdk.common.util.JsonUtil;
+import com.pdd.pop.sdk.common.util.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/kfz")
@@ -34,4 +50,96 @@ public class GoodsController {
         return goodsService.updateArtNo(request);
     }
 
+    @GetMapping("/getTemplateSimpleList/{token}")
+    public String getTemplateSimpleList(@PathVariable("token") String token){
+        Map map = JsonUtil.transferToObj(goodsService.getTemplateSimpleList(token), Map.class);
+        if(map.get("errorResponse") == null){
+            List list = (List) map.get("successResponse");
+            return JsonUtil.transferToJson(list);
+        }else{
+            return "获取模板失败";
+        }
+    }
+
+    @GetMapping("/getCategory/{token}")
+    public String getCategory(@PathVariable("token") String token){
+        Map map = JsonUtil.transferToObj(goodsService.getCategory(token), Map.class);
+
+        return JsonUtil.transferToJson(map);
+    }
+
+    /**
+     * 发布商品
+     */
+    /**
+     * 发布商品接口
+     * @param map
+     * @return
+     * @throws Exception
+     */
+    @PostMapping("/goodAddOne")
+    public String goodAddOne(@RequestBody Map map) {
+
+        GoodsItemAddRequest request = new GoodsItemAddRequest();
+
+        request.setToken(map.get("token").toString());
+        request.setTpl(map.get("tpl").toString());
+        request.setCatId("43000000000000000");
+        request.setMyCatId(map.get("myCatId").toString());
+        request.setItemName(map.get("itemName").toString());
+        request.setImportantDesc(map.get("importantDesc").toString());
+        request.setPrice(new BigDecimal(map.get("price").toString()).divide(new BigDecimal(100)).toString());
+        request.setNumber(map.get("number") == null ? "" : map.get("number").toString());
+        request.setQuality(map.get("quality").toString());
+        request.setQualityDesc(map.get("qualityDesc").toString());
+        request.setItemSn(map.get("itemSn") == null ? "" : map.get("itemSn").toString());
+        request.setImgUrl(map.get("imgUrl") == null ? "" : map.get("imgUrl").toString());
+
+        //获取实拍图网路路径
+//        String[] imagesArr = map.get("images") == null ? new String[0] : map.get("images").toString().split(";");
+
+//        List<String> imageList = new ArrayList<>();
+//
+//        for(int i=0;i<imagesArr.length;i++){
+//
+//            Map dataMap = JsonUtil.transferToObj(goodsService.upload(imagesArr[i],request.getToken()), Map.class);
+//
+//            imageList.add("");
+//            //当图片数量不足八张时
+//            if(i == imagesArr.length-1 && i < 8){
+//                for(int j=i;j<8;j++){
+//                    imageList.add(imageList.get(i));
+//                }
+//            }
+//        }
+//        //循环变成字符串
+//        String images = "";
+//        for(String image : imageList){
+//            if(images == ""){
+//                images = image;
+//            }else{
+//                images = images + ";" + image;
+//            }
+//        }
+//        request.setImages(images);
+        request.setImages("");
+
+        request.setItemDesc(map.get("itemDesc") == null ? "" : map.get("itemDesc").toString());
+        request.setBearShipping(map.get("bearShipping").toString());
+        request.setMouldld(Long.parseLong(map.get("mouldld").toString()));
+        request.setWeight(map.get("weight") == null ? BigDecimal.ZERO : new BigDecimal(map.get("weight").toString()));
+        request.setWeightPiece(map.get("weightPiece") == null ? BigDecimal.ZERO : new BigDecimal(map.get("weightPiece").toString()));
+
+        request.setIsbn(map.get("isbn") == null ? "" : map.get("isbn").toString());
+        request.setAuthor(map.get("author") == null ? "" : map.get("author").toString());
+        request.setPress(map.get("press") == null ? "" : map.get("press").toString());
+        request.setPubDate(map.get("pubDate") == null ? "" : map.get("pubDate").toString());
+        request.setBinding(map.get("binding") == null ? "" : map.get("binding").toString());
+
+
+
+        Map dataMap = JsonUtil.transferToObj(goodsService.itemAdd(request), Map.class);
+
+        return "上传成功";
+    }
 }

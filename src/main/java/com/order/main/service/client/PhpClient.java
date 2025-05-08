@@ -1,15 +1,10 @@
 package com.order.main.service.client;
 
-import com.dtflys.forest.annotation.Body;
-import com.dtflys.forest.annotation.Post;
-import com.dtflys.forest.annotation.Query;
-import com.dtflys.forest.annotation.Var;
+import com.dtflys.forest.annotation.*;
 import com.order.main.dto.requst.GetShopGoodsListRequest;
+import com.order.main.dto.requst.GoodsItemAddRequest;
 import com.order.main.dto.requst.ItemItemsnUpdateRequest;
-import com.order.main.dto.response.GetShopGoodsListResponse;
-import com.order.main.dto.response.GetShopInfoResponse;
-import com.order.main.dto.response.ItemItemsnUpdateResponse;
-import com.order.main.dto.response.KfzBaseResponse;
+import com.order.main.dto.response.*;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -23,5 +18,32 @@ public interface PhpClient {
 
     @Post(value = "{myURL}/shop/itemItemsnUpdate", dataType = "json",contentType = "application/json")
     KfzBaseResponse<ItemItemsnUpdateResponse> itemItemsnUpdate(@Var("myURL") String myURL, @Body ItemItemsnUpdateRequest request);
+
+    /**
+     * 商品新增
+     * @param myURL
+     * @param request
+     * @return
+     */
+    @Post(value = "{myURL}/shop/itemAdd", dataType = "json",contentType = "application/json")
+    String itemAdd(@Var("myURL") String myURL, @Body GoodsItemAddRequest request);
+
+    /**
+     * 运费模板
+     */
+    @Get(value = "{myURL}/delivery/templateSimpleList", dataType = "json")
+    String getTemplateSimpleList(@Var("myURL") String myURL, @Query("token") String token);
+
+    /**
+     * 公共分类数据
+     */
+    @Get(value = "{myURL}/common/category", dataType = "json")
+    String getCategory(@Var("myURL") String myURL, @Query("token") String token);
+
+    /**
+     * 图片上传
+     */
+    @Get(value = "{myURL}/image/upload", dataType = "json")
+    String upload(@Var("myURL") String myURL, @Query("file") String file ,@Query("token") String token);
 
 }
