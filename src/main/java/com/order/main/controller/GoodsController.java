@@ -79,7 +79,7 @@ public class GoodsController {
      * @throws Exception
      */
     @PostMapping("/goodAddOne")
-    public String goodAddOne(@RequestBody Map map) {
+    public void goodAddOne(@RequestBody Map map) {
 
         GoodsItemAddRequest request = new GoodsItemAddRequest();
 
@@ -139,6 +139,10 @@ public class GoodsController {
 
         Map dataMap = JsonUtil.transferToObj(goodsService.itemAdd(request), Map.class);
 
-        return "上传成功";
+        Map errorResponse  = (Map) dataMap.get("errorResponse");
+        if(errorResponse != null){
+            System.out.println("---------------------上传报错");
+            System.out.println(JsonUtil.transferToJson(errorResponse)+"------------");
+        }
     }
 }
