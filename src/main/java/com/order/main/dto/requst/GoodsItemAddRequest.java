@@ -80,7 +80,7 @@ public class GoodsItemAddRequest {
     /**
      *  运费模板编号。bearShipping=buyer时必填。取值范围参考接口：kongfz.delivery.template.name.list 或 kongfz.delivery.template.simple.list
      */
-    private Long mouldld;
+    private Long mouldId;
 
     /**
      *  商品重量。当选择的是按重量的运费模板时必填。取值范围：0.01～9999.99，单位：千克
@@ -238,12 +238,12 @@ public class GoodsItemAddRequest {
         this.bearShipping = bearShipping;
     }
 
-    public Long getMouldld() {
-        return mouldld;
+    public Long getMouldId() {
+        return mouldId;
     }
 
-    public void setMouldld(Long mouldld) {
-        this.mouldld = mouldld;
+    public void setMouldId(Long mouldId) {
+        this.mouldId = mouldId;
     }
 
     public BigDecimal getWeight() {

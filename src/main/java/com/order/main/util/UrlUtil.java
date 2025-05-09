@@ -10,11 +10,11 @@ public final class UrlUtil {
 //    }
 
     public static String getUrl(){
-        return "/zhishu/";
+        return "./file/";
     }
 
     public static String getPath(){
-        //return "https://test.api.buzhiyushu.cn";
-        return "http://localhost:8080";
+        return "https://api.buzhiyushu.cn";
+//        return "http://localhost:8080";
     }
 }

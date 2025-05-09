@@ -2,6 +2,7 @@ package com.order.main.controller;
 
 import com.dtflys.forest.annotation.Get;
 import com.order.main.dto.requst.GoodsItemAddRequest;
+import com.order.main.dto.requst.GoodsUpload;
 import com.order.main.dto.requst.UpdateArtNoRequest;
 import com.order.main.dto.response.ItemItemAddResponse;
 import com.order.main.dto.response.KfzBaseResponse;
@@ -96,37 +97,35 @@ public class GoodsController {
         request.setImgUrl(map.get("imgUrl") == null ? "" : map.get("imgUrl").toString());
 
         //获取实拍图网路路径
-//        String[] imagesArr = map.get("images") == null ? new String[0] : map.get("images").toString().split(";");
+        String[] imagesArr = map.get("images") == null ? new String[0] : map.get("images").toString().split(";");
 
-//        List<String> imageList = new ArrayList<>();
-//
-//        for(int i=0;i<imagesArr.length;i++){
-//
-//            Map dataMap = JsonUtil.transferToObj(goodsService.upload(imagesArr[i],request.getToken()), Map.class);
-//
-//            imageList.add("");
-//            //当图片数量不足八张时
-//            if(i == imagesArr.length-1 && i < 8){
-//                for(int j=i;j<8;j++){
-//                    imageList.add(imageList.get(i));
-//                }
-//            }
-//        }
-//        //循环变成字符串
-//        String images = "";
-//        for(String image : imageList){
-//            if(images == ""){
-//                images = image;
-//            }else{
-//                images = images + ";" + image;
-//            }
-//        }
-//        request.setImages(images);
-        request.setImages("");
+        String images = "";
+        for(int i=0;i<imagesArr.length;i++){
+
+            String iamge = imagesArr[i];
+
+            Map dataMap = JsonUtil.transferToObj(goodsService.upload(iamge,request.getToken()), Map.class);
+            Map successResponse = (Map) dataMap.get("successResponse");
+            Map kongkzImage = (Map) successResponse.get("image");
+
+            if(i==0){
+                images = kongkzImage.get("url").toString();
+            }else{
+                images = images + ";" + kongkzImage.get("url").toString();
+            }
+            //当图片数量不足八张时
+            if(i == imagesArr.length-1 && i < 8){
+                for(int j=i;j<7;j++){
+                    images = images + ";" + kongkzImage.get("url").toString();
+                }
+            }
+        }
+
+        request.setImages(images);
 
         request.setItemDesc(map.get("itemDesc") == null ? "" : map.get("itemDesc").toString());
         request.setBearShipping(map.get("bearShipping").toString());
-        request.setMouldld(Long.parseLong(map.get("mouldld").toString()));
+        request.setMouldId(Long.parseLong(map.get("mouldld").toString()));
         request.setWeight(map.get("weight") == null ? BigDecimal.ZERO : new BigDecimal(map.get("weight").toString()));
         request.setWeightPiece(map.get("weightPiece") == null ? BigDecimal.ZERO : new BigDecimal(map.get("weightPiece").toString()));
 

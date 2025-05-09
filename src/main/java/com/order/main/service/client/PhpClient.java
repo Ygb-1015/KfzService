@@ -43,7 +43,7 @@ public interface PhpClient {
     /**
      * 图片上传
      */
-    @Get(value = "{myURL}/image/upload", dataType = "json")
+    @Post(value = "{myURL}/image/upload", dataType = "json")
     String upload(@Var("myURL") String myURL, @Query("file") String file ,@Query("token") String token);
 
 }
