@@ -86,12 +86,12 @@ public class GoodsController {
         request.setToken(map.get("token").toString());
         request.setTpl(map.get("tpl").toString());
         request.setCatId("43000000000000000");
-        request.setMyCatId(map.get("myCatId").toString());
-        request.setItemName(map.get("itemName").toString());
-        request.setImportantDesc(map.get("importantDesc").toString());
+        request.setMyCatId(map.get("myCatId") == null ? "" : map.get("myCatId").toString());
+        request.setItemName(map.get("itemName") == null ? "" : map.get("itemName").toString());
+        request.setImportantDesc(map.get("importantDesc") == null ? "" : map.get("importantDesc").toString());
         request.setPrice(new BigDecimal(map.get("price").toString()).divide(new BigDecimal(100)).toString());
         request.setNumber(map.get("number") == null ? "" : map.get("number").toString());
-        request.setQuality(map.get("quality").toString());
+        request.setQuality(map.get("quality") == null ? "" : map.get("quality").toString());
         request.setQualityDesc(map.get("qualityDesc").toString());
         request.setItemSn(map.get("itemSn") == null ? "" : map.get("itemSn").toString());
         request.setImgUrl(map.get("imgUrl") == null ? "" : map.get("imgUrl").toString());
