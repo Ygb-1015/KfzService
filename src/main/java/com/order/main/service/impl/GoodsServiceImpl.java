@@ -21,12 +21,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -46,7 +44,7 @@ public class GoodsServiceImpl implements GoodsService {
 
     @Autowired
     private RedisUtils redisUtils;
-    ;
+
 
     @Override
     public Boolean synchronizationGoods(Long shopId) {
@@ -94,11 +92,11 @@ public class GoodsServiceImpl implements GoodsService {
     }
 
     public List<GetShopGoodsListResponse.ShopGoods> queryShopGoods(String token, String refreshToken, Long shopId, String lastGoodsSynTime) {
-        Boolean isHaveNext = true;
+        boolean isHaveNext = true;
         Integer pageNum = 1;
         List<GetShopGoodsListResponse.ShopGoods> shopGoodsList = new ArrayList<>();
 
-        Boolean isRefreshToken = false;
+        boolean isRefreshToken = false;
 
         while (isHaveNext) {
             // 构建查询店铺商品请求参数

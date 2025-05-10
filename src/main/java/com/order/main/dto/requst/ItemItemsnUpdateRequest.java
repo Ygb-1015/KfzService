@@ -1,5 +1,8 @@
 package com.order.main.dto.requst;
 
+import lombok.Data;
+
+@Data
 public class ItemItemsnUpdateRequest {
 
     // token
@@ -11,27 +14,4 @@ public class ItemItemsnUpdateRequest {
     // 货号
     private String itemSn;
 
-    public String getToken() {
-        return token;
-    }
-
-    public void setToken(String token) {
-        this.token = token;
-    }
-
-    public Long getItemId() {
-        return itemId;
-    }
-
-    public void setItemId(Long itemId) {
-        this.itemId = itemId;
-    }
-
-    public String getItemSn() {
-        return itemSn;
-    }
-
-    public void setItemSn(String itemSn) {
-        this.itemSn = itemSn;
-    }
 }

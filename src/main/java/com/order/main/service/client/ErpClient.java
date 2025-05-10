@@ -1,10 +1,17 @@
 package com.order.main.service.client;
 
 import com.dtflys.forest.annotation.*;
+import com.order.main.dto.bo.OperatingInventoryVo;
+import com.order.main.dto.bo.ShopGoodsPublishedVo;
+import com.order.main.dto.bo.TDistrictVo;
+import com.order.main.dto.bo.TShopOrderVo;
 import com.order.main.dto.requst.GoodsComparisonRequest;
+import com.order.main.dto.requst.OrderListByShopIdRequest;
 import com.order.main.dto.requst.UpdateTokenRequest;
 import com.order.main.dto.response.ShopVo;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.List;
 
@@ -38,4 +45,47 @@ public interface ErpClient {
      */
     @Post(value = "{myURL}/zhishu/shopGoods/goodsComparison", dataType = "json", headers = {"Content-Type: application/json"})
     Boolean goodsComparison(@Var("myURL") String myURL, @Body GoodsComparisonRequest request);
+
+    /**
+     * 修改店铺订单更新时间
+     * @param myURL
+     * @param shopId
+     * @param startUpdatedAt
+     * @return
+     */
+    @Put(value = "{myURL}/zhishu/shop/updateTime", dataType = "json")
+    Boolean updateTime(@Var("myURL") String myURL, @Query("shopId") Long shopId, @Query("startUpdatedAt") Long startUpdatedAt);
+
+    /**
+     * 根据店铺Id查询商品列表
+     */
+    @Get(value = "{baseUrl}/zhishu/shopGoodsPublished/getListByShopId", dataType = "json")
+    List<ShopGoodsPublishedVo> getListByShopId(@Var("baseUrl") String baseUrl, @Query("shopId") Long shopId);
+
+    /**
+     * 根据区划名称查询区划列表
+     */
+    @Post(value = "{baseUrl}/district/queryListByName", dataType = "json", headers = {"Content-Type: application/json"})
+    List<TDistrictVo> queryListByName(@Var("baseUrl") String baseUrl, @Body List<String> districtNames);
+
+    /**
+     * 根据店铺Id查询订单列表
+     */
+    @Post(value = "{baseUrl}/zhishu/shopOrder/listByShopId", dataType = "json", headers = {"Content-Type: application/json"})
+    List<TShopOrderVo> listByShopId(@Var("baseUrl") String baseUrl, @Body OrderListByShopIdRequest request);
+
+    /**
+     * 批量插入/更新订单
+     */
+    @Post(value = "{baseUrl}/zhishu/shopOrder/insertOrUpdateOrderBatch", headers = {"Content-Type: application/json"})
+    Boolean insertOrUpdateOrderBatch(@Var("baseUrl") String baseUrl, @Body List<TShopOrderVo> orderList);
+
+    /**
+     * 操作库存
+     * @param myURL
+     * @param operatingInventoryVo
+     * @return
+     */
+    @Post(value = "{myURL}/zhishu/shopGoods/operatingInventory", dataType = "json")
+    Boolean OperatingInventory(@Var("myURL") String myURL, @Body OperatingInventoryVo operatingInventoryVo);
 }

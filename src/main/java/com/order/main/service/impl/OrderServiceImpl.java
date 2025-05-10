@@ -1,0 +1,338 @@
+package com.order.main.service.impl;
+
+import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson.JSONObject;
+import com.order.main.dto.bo.OperatingInventoryVo;
+import com.order.main.dto.bo.ShopGoodsPublishedVo;
+import com.order.main.dto.bo.TDistrictVo;
+import com.order.main.dto.bo.TShopOrderVo;
+import com.order.main.dto.requst.GetShopGoodsListRequest;
+import com.order.main.dto.requst.OrderListByShopIdRequest;
+import com.order.main.dto.response.GetShopGoodsListResponse;
+import com.order.main.dto.response.KfzBaseResponse;
+import com.order.main.dto.response.PageQueryOrdersResponse;
+import com.order.main.dto.response.ShopVo;
+import com.order.main.enums.*;
+import com.order.main.service.OrderService;
+import com.order.main.service.client.ErpClient;
+import com.order.main.service.client.PhpClient;
+import com.order.main.util.ClientConstantUtils;
+import com.order.main.util.ThreadPoolUtils;
+import com.order.main.util.TokenUtils;
+import com.pdd.pop.sdk.http.api.pop.response.PddOrderListGetResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.time.*;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+@Service
+public class OrderServiceImpl implements OrderService {
+
+    // 日志记录器
+    private static final Logger log = LoggerFactory.getLogger(OrderServiceImpl.class);
+
+    @Autowired
+    private ErpClient erpClient;
+
+    @Autowired
+    private PhpClient phpClient;
+
+    @Autowired
+    private TokenUtils tokenUtils;
+
+    @Override
+    public void fullSynchronizationOrder(List<Long> shopIdList) {
+        if (ObjectUtil.isEmpty(shopIdList)) {
+            System.err.println("店铺ID为空");
+            return;
+        }
+        for (Long shopId : shopIdList) {
+            ThreadPoolUtils.execute(() -> {
+                System.out.println("线程ID-" + Thread.currentThread().getId() + ":同步店铺订单-shopId");
+                // 根据shopId获取店铺信息
+                ShopVo shop = erpClient.getShopInfo(ClientConstantUtils.ERP_URL, shopId);
+
+                // 如果店铺不存在，抛出异常
+                if (shop == null) {
+                    // 记录错误日志
+                    log.error("店铺不存在，shopId: {}", shopId);
+                    // 抛出异常
+                    throw new RuntimeException("店铺不存在");
+                }
+                try {
+                    // 调用孔夫子增量订单接口
+                    synOrder(shop);
+                } catch (Exception e) {
+                    // 记录错误日志
+                    log.error("同步店铺订单失败，shopId: {}", shopId, e);
+                    // 抛出异常
+                    throw new RuntimeException("同步订单失败: " + e.getMessage(), e);
+                }
+            });
+        }
+    }
+
+    private void synOrder(ShopVo shop) throws Exception {
+
+        // 定义一个集合用来存储返回的订单数据
+        List<PageQueryOrdersResponse.Order> allOrderList = new ArrayList<>();
+        // 获取当前时间时间戳
+        Instant now = Instant.now();
+        // 判断是否还有下一页标识符，默认为true
+        boolean isHaveNext = true;
+        // 是否刷新token标识符，默认为false
+        boolean isRefreshToken = false;
+
+        // 分页查询默认从第一页开始查询
+        Integer pageNum = 1;
+        // 获取店铺孔网token
+        String token = shop.getToken();
+        // 获取店铺孔网refreshToken
+        String refreshToken = shop.getRefreshToken();
+        // 获取店铺Id
+        Long  shopId = shop.getId();
+        // 初始化查询时间
+        String startUpdateTime;
+        // 获取上次更新订单时间戳
+        Long startUpdatedAt = shop.getStartUpdatedAt();
+        // 判断是不是第一次同步
+        if (ObjectUtil.isNotNull(startUpdatedAt)) {
+            // 不是拼接上次同步时间作为筛选条件
+            // 将毫秒级时间戳转换为Instant对象
+            Instant instant = Instant.ofEpochMilli(startUpdatedAt);
+            // 将Instant对象转换为LocalDateTime对象，并设置时区为系统默认时区
+            LocalDateTime localDateTime = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
+            // 定义日期时间格式
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            // 使用定义的格式化器格式化LocalDateTime对象为字符串
+            startUpdateTime = localDateTime.format(formatter);
+        } else {
+            // 是第一次同步默认查询近一个月的
+            // 获取今天0时时间戳
+            Instant today = ZonedDateTime.of(LocalDate.now(), LocalTime.MIDNIGHT, ZoneId.systemDefault()).toInstant();
+            // 默认从九十天前的数据开始更新
+            Instant startInstant = today.minus(Duration.ofDays(30));
+            // 将Instant对象转换为LocalDateTime对象，并设置时区为系统默认时区
+            LocalDateTime localDateTime = LocalDateTime.ofInstant(startInstant, ZoneId.systemDefault());
+            // 定义日期时间格式
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            // 使用定义的格式化器格式化LocalDateTime对象为字符串
+            startUpdateTime = localDateTime.format(formatter);
+        }
+
+        while (isHaveNext) {
+            KfzBaseResponse<PageQueryOrdersResponse> ordersResponse = phpClient.pageQueryOrders(ClientConstantUtils.PHP_URL,token, UserTypeEnum.SELLER.getCode(), pageNum, 10, startUpdateTime);
+            log.info("查询孔夫子店铺订单响应-{}", JSONObject.toJSONString(ordersResponse));
+            if (!isRefreshToken && ObjectUtil.isNotEmpty(ordersResponse.getErrorResponse())) {
+                List<Long> tokenErrorCode = new ArrayList<>();
+                tokenErrorCode.add(1000L);
+                tokenErrorCode.add(1001L);
+                tokenErrorCode.add(2000L);
+                tokenErrorCode.add(2001L);
+                if (tokenErrorCode.contains(ordersResponse.getErrorResponse().getCode())) {
+                    token = tokenUtils.refreshToken(refreshToken, shopId);
+                    isRefreshToken = true;
+                } else {
+                    throw new RuntimeException("查询孔夫子店铺订单异常-" + JSONObject.toJSONString(ordersResponse));
+                }
+            } else {
+                if (ObjectUtil.isNotEmpty(ordersResponse.getSuccessResponse().getList())) {
+                    allOrderList.addAll(ordersResponse.getSuccessResponse().getList());
+                    if (ordersResponse.getSuccessResponse().getPages() <= ordersResponse.getSuccessResponse().getPageNum())
+                        isHaveNext = false;
+                    pageNum++;
+                } else {
+                    isHaveNext = false;
+                }
+            }
+        }
+        long startTime = now.toEpochMilli();
+        long endTime = Instant.now().toEpochMilli();
+        // 获取当前时间时间戳
+        log.info("查询孔夫子店铺订单:订单数量-{}，耗时-{}，订单-{}",allOrderList.size(),endTime-startTime, JSONObject.toJSONString(allOrderList));
+        // 若订单列表不为空
+        if (ObjectUtil.isNotEmpty(allOrderList)) {
+            // 查询erp店铺全部商品
+            List<ShopGoodsPublishedVo> shopGoodsList = erpClient.getListByShopId(ClientConstantUtils.ERP_URL, shop.getId());
+            if (ObjectUtil.isEmpty(shopGoodsList)) {
+                log.info("该店铺下没有商品，不要需要同步订单");
+                return;
+            }
+            List<String> shopGoodsIdList = shopGoodsList.stream().map(ShopGoodsPublishedVo::getPlatformId).collect(Collectors.toList());
+            // // 收集区划名称集合
+            // List<String> districtNames = new ArrayList<>();
+            // allOrderList.stream().filter(order -> ObjectUtil.isNotEmpty(order.getReceiverInfo())).collect(Collectors.toList()).forEach(order -> {
+            //     districtNames.add(order.getReceiverInfo().getProvName());
+            //     districtNames.add(order.getReceiverInfo().getCityName());
+            //     districtNames.add(order.getReceiverInfo().getAreaName());
+            // });
+            // // 根据名称查询区划数据，并转成map
+            // Map<String, String> districtMap = new HashMap<>();
+            // if (ObjectUtil.isNotEmpty(districtNames)){
+            //     List<TDistrictVo> tDistrictVos = erpClient.queryListByName(ClientConstantUtils.ERP_URL, districtNames);
+            //     if (ObjectUtil.isNotEmpty(tDistrictVos)){
+            //         districtMap = tDistrictVos.stream().distinct().collect(Collectors.toMap(TDistrictVo::getName, TDistrictVo::getCode));
+            //     }
+            // }
+            List<TShopOrderVo> realOrderList = new ArrayList<>();
+            // 根据商品Id过滤订单列表
+            for (PageQueryOrdersResponse.Order order : allOrderList) {
+                // 重新设置订单下商品，只保留erp商品库中存在的商品
+                List<PageQueryOrdersResponse.Order.Item> realItemList = new ArrayList<>();
+                for (PageQueryOrdersResponse.Order.Item item : order.getItems()) {
+                    if (shopGoodsIdList.contains(item.getItemId().toString())) {
+                        realItemList.add(item);
+                    }
+                }
+                // 判断订单下过滤后的商品是否为空
+                // 若为空则跳过该订单
+                if (ObjectUtil.isEmpty(realItemList)) continue;
+                // 若不为空保留订单并进行处理
+                TShopOrderVo tShopOrderVo = new TShopOrderVo();
+                BeanUtils.copyProperties(order, tShopOrderVo);
+                PageQueryOrdersResponse.Order.ReceiverInfo receiverInfo = order.getReceiverInfo();
+                List<PageQueryOrdersResponse.Order.Item> items = order.getItems();
+                // 店铺Id
+                tShopOrderVo.setShopId(shop.getId().toString());
+                // 店铺名称
+                tShopOrderVo.setShopName(shop.getShopName());
+                // 收件人详细信息对象
+                if (ObjectUtil.isNotNull(receiverInfo)){
+                    // 地址
+                    tShopOrderVo.setAddress(receiverInfo.getAddress());
+                    tShopOrderVo.setAddressMask(receiverInfo.getAddress());
+                    tShopOrderVo.setReceiverAddress(receiverInfo.getAddress());
+                    tShopOrderVo.setReceiverAddressMask(receiverInfo.getAddress());
+                    // 省份
+                    tShopOrderVo.setProvince(receiverInfo.getProvName());
+                    // 区，乡镇
+                    tShopOrderVo.setTown(receiverInfo.getAreaName());
+                    // if (ObjectUtil.isNotEmpty(districtMap)){
+                    //     tShopOrderVo.setProvinceId(districtMap.get(receiverInfo.getProvName()));
+                    //     tShopOrderVo.setTownId(districtMap.get(receiverInfo.getAreaName()));
+                    // }
+                    // 收件人姓名
+                    tShopOrderVo.setReceiverName(receiverInfo.getReceiverName());
+                    tShopOrderVo.setReceiverNameMask(receiverInfo.getReceiverName());
+                    // 收件人手机号
+                    tShopOrderVo.setReceiverPhone(receiverInfo.getPhoneNum());
+                    tShopOrderVo.setReceiverPhoneMask(receiverInfo.getMobile());
+
+                }
+                // 售后状态
+                if (KfzOrderStatusEnum.REFUND.getCode().equals(order.getOrderStatus())){
+                    tShopOrderVo.setAfterSalesStatus(AfterSalesStatusEnum.REFUND_WAIT_FOR_SELLER.getCode());
+                } else if (KfzOrderStatusEnum.REFUND_DEALD.getCode().equals(order.getOrderStatus())){
+                    tShopOrderVo.setAfterSalesStatus(AfterSalesStatusEnum.REFUND_SUCCESS.getCode());
+                } else {
+                    tShopOrderVo.setAfterSalesStatus(AfterSalesStatusEnum.NONE.getCode());
+                }
+                // 买家留言信息
+                tShopOrderVo.setBuyerMemo(order.getBuyerRemark());
+                // 成交状态
+                if (KfzOrderStatusEnum.SUCCESSFUL.getCode().equals(order.getOrderStatus())){
+                    tShopOrderVo.setConfirmStatus(ConfirmStatusEnum.SOLD.getCode());
+                } else if (KfzOrderStatusEnum.BUYER_CANCELLED.getCode().equals(order.getOrderStatus()) || KfzOrderStatusEnum.SELLER_CANCELLED_BEFORE_CONFIRM.getCode().equals(order.getOrderStatus()) || KfzOrderStatusEnum.ADMIN_CLOSED_BEFORE_CONFIRM.getCode().equals(order.getOrderStatus())){
+                    tShopOrderVo.setConfirmStatus(ConfirmStatusEnum.CANCEL.getCode());
+                } else {
+                    tShopOrderVo.setAfterSalesStatus(ConfirmStatusEnum.NOT_SOLD.getCode());
+                }
+                // 成交时间
+                tShopOrderVo.setConfirmTime(order.getPayTime());
+                // 折扣金额，单位：元，折扣金额=平台优惠+商家优惠+团长免单优惠金额
+                tShopOrderVo.setDiscountAmount(new BigDecimal(order.getFavorableMoney()));
+                // 商品金额
+                tShopOrderVo.setGoodsAmount(new BigDecimal(order.getGoodsAmount()));
+                // 订单编号
+                tShopOrderVo.setOrderSn(order.getOrderId().toString());
+                // 订单状态
+                if (KfzOrderStatusEnum.PAID_TO_SHIP.getCode().equals(order.getOrderStatus())){
+                    tShopOrderVo.setOrderStatus(OrderStatusEnum.WAIT_FOR_SHIPMENT.getCode());
+                } else if (KfzOrderStatusEnum.SHIPPED_TO_RECEIPT.getCode().equals(order.getOrderStatus())){
+                    tShopOrderVo.setOrderStatus(OrderStatusEnum.SHIPMENT_WAIT_FOR_SIGN.getCode());
+                } else if (KfzOrderStatusEnum.SUCCESSFUL.getCode().equals(order.getOrderStatus())){
+                    tShopOrderVo.setOrderStatus(OrderStatusEnum.SIGNED.getCode());
+                }
+                // 支付金额
+                tShopOrderVo.setPayAmount(new BigDecimal(order.getOrderAmount()));
+                // 支付时间
+                tShopOrderVo.setPayTime(order.getPayTime());
+                // 平台优惠金额默认平台优惠为0
+                tShopOrderVo.setPlatformDiscount(new BigDecimal("0.00"));
+                // 邮费
+                tShopOrderVo.setPostage(new BigDecimal(order.getShippingFee()));
+                // 确认收货时间
+                tShopOrderVo.setReceiveTime(order.getFinishTime());
+                // 订单备注
+                tShopOrderVo.setRemark(order.getSellerRemarkText());
+                // 备注类型, 0:未打标记,1:红,2:黄,3:绿,4:蓝,5:紫
+                tShopOrderVo.setRemarkTag(order.getSellerFlagType().toString());
+                // 订单审核状态（0-正常订单， 1-审核中订单）
+                tShopOrderVo.setRiskControlStatus(0);
+                // 商家优惠金额
+                tShopOrderVo.setSellerDiscount(new BigDecimal(order.getFavorableMoney()));
+                // 快递单号
+                tShopOrderVo.setTrackingNumber(order.getShipmentNum());
+                // 订单类型 0-普通订单 ，1- 定金订单
+                tShopOrderVo.setTradeType(0);
+                PageQueryOrdersResponse.Order orderItemList = new PageQueryOrdersResponse.Order();
+                orderItemList.setReceiverInfo(order.getReceiverInfo());
+                orderItemList.setItems(realItemList);
+                tShopOrderVo.setItemList(JSONObject.toJSONString(orderItemList));
+                realOrderList.add(tShopOrderVo);
+            }
+            // 若订单列表不为空查询erp订单表近90天该店铺订单数据
+            if (ObjectUtil.isNotEmpty(realOrderList)) {
+                OrderListByShopIdRequest queryRequest = new OrderListByShopIdRequest();
+                queryRequest.setShopId(shop.getId());
+                queryRequest.setOrderSnList(realOrderList.stream().map(TShopOrderVo::getOrderSn).collect(Collectors.toList()));
+                List<TShopOrderVo> oldOrderList = erpClient.listByShopId(ClientConstantUtils.ERP_URL, queryRequest);
+                if (ObjectUtil.isNotEmpty(oldOrderList)) {
+                    // 更新已存在的订单Id到realOrder
+                    for (TShopOrderVo realOrder : realOrderList) {
+                        for (TShopOrderVo oldOrder : oldOrderList) {
+                            if (realOrder.getOrderSn().equals(oldOrder.getOrderSn())) {
+                                realOrder.setId(oldOrder.getId());
+                            }
+                        }
+                    }
+
+                }
+                // 新增并更新订单
+                erpClient.insertOrUpdateOrderBatch(ClientConstantUtils.ERP_URL, realOrderList);
+                for (TShopOrderVo realOrder : realOrderList) {
+                    // TODO 暂时只做新订单扣减库存操作
+                    if (ObjectUtil.isNull(realOrder.getId())) {
+                        OperatingInventoryVo operatingInventoryVo = new OperatingInventoryVo();
+                        // 默认拼多多店铺-1
+                        operatingInventoryVo.setShopType(2);
+                        // 扣减库存类型
+                        operatingInventoryVo.setOperationType(2);
+                        operatingInventoryVo.setMallId(shop.getMallId());
+                        PageQueryOrdersResponse.Order order = JSONObject.parseObject(realOrder.getItemList(), PageQueryOrdersResponse.Order.class);
+                        List<OperatingInventoryVo.GoodsItem> goodsItems = order.getItems().stream().map(item -> {
+                            OperatingInventoryVo.GoodsItem goodsItem = new OperatingInventoryVo.GoodsItem();
+                            goodsItem.setPlatformId(item.getItemId().toString());
+                            goodsItem.setCount(item.getNumber());
+                            return goodsItem;
+                        }).collect(Collectors.toList());
+                        operatingInventoryVo.setGoodsItems(goodsItems);
+                        erpClient.OperatingInventory(ClientConstantUtils.ERP_URL, operatingInventoryVo);
+                    }
+                }
+            }
+        }
+        // 更新最后同步时间
+        erpClient.updateTime(ClientConstantUtils.ERP_URL, shop.getId(), now.getEpochSecond());
+    }
+}
