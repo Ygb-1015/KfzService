@@ -46,4 +46,15 @@ public interface PhpClient {
     @Post(value = "{myURL}/image/upload", dataType = "json")
     String upload(@Var("myURL") String myURL, @Query("file") String file ,@Query("token") String token);
 
+
+    /**
+     *  * 修改商品库存
+     * @param myURL
+     * @param token     token
+     * @param itemId    孔夫子平台的商品id
+     * @param number    库存数量
+     * @return
+     */
+    @Post(value = "{myURL}/shop/itemNumberUpdate", dataType = "json")
+    String itemNumberUpdate(@Var("myURL") String myURL ,@Query("token") String token , @Query("itemId") String itemId , @Query("number") String number);
 }

@@ -47,8 +47,17 @@ public interface GoodsService {
      */
     String upload(String file,String token);
 
-    public void zanTing(String threadId);
+    /**
+     * 修改商品库存
+     * @param token
+     * @param itemId    孔夫子平台的商品id
+     * @param number    库存数量
+     * @return
+     */
+    String itemNumberUpdate(String token,String itemId,String number);
 
-    public void huanXing(String threadId);
+    void zanTing(String threadId);
+
+    void huanXing(String threadId);
 
 }
