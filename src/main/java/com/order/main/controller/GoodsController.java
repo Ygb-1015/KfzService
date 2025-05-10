@@ -1,25 +1,14 @@
 package com.order.main.controller;
 
-import com.dtflys.forest.annotation.Get;
 import com.order.main.dto.requst.GoodsItemAddRequest;
-import com.order.main.dto.requst.GoodsUpload;
 import com.order.main.dto.requst.UpdateArtNoRequest;
-import com.order.main.dto.response.ItemItemAddResponse;
-import com.order.main.dto.response.KfzBaseResponse;
 import com.order.main.service.GoodsService;
-import com.order.main.service.client.PhpClient;
-import com.order.main.threads.KongfzTaskRunnable;
-import com.order.main.util.ClientConstantUtils;
-import com.order.main.util.EasyExcelUtil;
 import com.order.main.util.InterfaceUtils;
-import com.order.main.util.UrlUtil;
 import com.pdd.pop.sdk.common.util.JsonUtil;
-import com.pdd.pop.sdk.common.util.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
