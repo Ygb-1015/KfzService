@@ -84,6 +84,14 @@ public class OrderServiceImpl implements OrderService {
 
     private void synOrder(ShopVo shop) throws Exception {
 
+        // 查询erp店铺全部商品
+        List<ShopGoodsPublishedVo> shopGoodsList = erpClient.getListByShopId(ClientConstantUtils.ERP_URL, shop.getId());
+        if (ObjectUtil.isEmpty(shopGoodsList)) {
+            log.info("该店铺下没有商品，不要需要同步订单");
+            return;
+        }
+        List<String> shopGoodsIdList = shopGoodsList.stream().map(ShopGoodsPublishedVo::getPlatformId).collect(Collectors.toList());
+
         // 定义一个集合用来存储返回的订单数据
         List<PageQueryOrdersResponse.Order> allOrderList = new ArrayList<>();
         // 获取当前时间时间戳
@@ -162,28 +170,6 @@ public class OrderServiceImpl implements OrderService {
         log.info("查询孔夫子店铺订单:订单数量-{}，耗时-{}，订单-{}",allOrderList.size(),endTime-startTime, JSONObject.toJSONString(allOrderList));
         // 若订单列表不为空
         if (ObjectUtil.isNotEmpty(allOrderList)) {
-            // 查询erp店铺全部商品
-            List<ShopGoodsPublishedVo> shopGoodsList = erpClient.getListByShopId(ClientConstantUtils.ERP_URL, shop.getId());
-            if (ObjectUtil.isEmpty(shopGoodsList)) {
-                log.info("该店铺下没有商品，不要需要同步订单");
-                return;
-            }
-            List<String> shopGoodsIdList = shopGoodsList.stream().map(ShopGoodsPublishedVo::getPlatformId).collect(Collectors.toList());
-            // // 收集区划名称集合
-            // List<String> districtNames = new ArrayList<>();
-            // allOrderList.stream().filter(order -> ObjectUtil.isNotEmpty(order.getReceiverInfo())).collect(Collectors.toList()).forEach(order -> {
-            //     districtNames.add(order.getReceiverInfo().getProvName());
-            //     districtNames.add(order.getReceiverInfo().getCityName());
-            //     districtNames.add(order.getReceiverInfo().getAreaName());
-            // });
-            // // 根据名称查询区划数据，并转成map
-            // Map<String, String> districtMap = new HashMap<>();
-            // if (ObjectUtil.isNotEmpty(districtNames)){
-            //     List<TDistrictVo> tDistrictVos = erpClient.queryListByName(ClientConstantUtils.ERP_URL, districtNames);
-            //     if (ObjectUtil.isNotEmpty(tDistrictVos)){
-            //         districtMap = tDistrictVos.stream().distinct().collect(Collectors.toMap(TDistrictVo::getName, TDistrictVo::getCode));
-            //     }
-            // }
             List<TShopOrderVo> realOrderList = new ArrayList<>();
             // 根据商品Id过滤订单列表
             for (PageQueryOrdersResponse.Order order : allOrderList) {
@@ -217,10 +203,6 @@ public class OrderServiceImpl implements OrderService {
                     tShopOrderVo.setProvince(receiverInfo.getProvName());
                     // 区，乡镇
                     tShopOrderVo.setTown(receiverInfo.getAreaName());
-                    // if (ObjectUtil.isNotEmpty(districtMap)){
-                    //     tShopOrderVo.setProvinceId(districtMap.get(receiverInfo.getProvName()));
-                    //     tShopOrderVo.setTownId(districtMap.get(receiverInfo.getAreaName()));
-                    // }
                     // 收件人姓名
                     tShopOrderVo.setReceiverName(receiverInfo.getReceiverName());
                     tShopOrderVo.setReceiverNameMask(receiverInfo.getReceiverName());
