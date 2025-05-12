@@ -84,13 +84,13 @@ public class OrderServiceImpl implements OrderService {
 
     private void synOrder(ShopVo shop) throws Exception {
 
-        // 查询erp店铺全部商品
-        List<ShopGoodsPublishedVo> shopGoodsList = erpClient.getListByShopId(ClientConstantUtils.ERP_URL, shop.getId());
-        if (ObjectUtil.isEmpty(shopGoodsList)) {
-            log.info("该店铺下没有商品，不要需要同步订单");
-            return;
-        }
-        List<String> shopGoodsIdList = shopGoodsList.stream().map(ShopGoodsPublishedVo::getPlatformId).collect(Collectors.toList());
+        // // 查询erp店铺全部商品
+        // List<ShopGoodsPublishedVo> shopGoodsList = erpClient.getListByShopId(ClientConstantUtils.ERP_URL, shop.getId());
+        // if (ObjectUtil.isEmpty(shopGoodsList)) {
+        //     log.info("该店铺下没有商品，不要需要同步订单");
+        //     return;
+        // }
+        // List<String> shopGoodsIdList = shopGoodsList.stream().map(ShopGoodsPublishedVo::getPlatformId).collect(Collectors.toList());
 
         // 定义一个集合用来存储返回的订单数据
         List<PageQueryOrdersResponse.Order> allOrderList = new ArrayList<>();
@@ -173,21 +173,21 @@ public class OrderServiceImpl implements OrderService {
             List<TShopOrderVo> realOrderList = new ArrayList<>();
             // 根据商品Id过滤订单列表
             for (PageQueryOrdersResponse.Order order : allOrderList) {
-                // 重新设置订单下商品，只保留erp商品库中存在的商品
-                List<PageQueryOrdersResponse.Order.Item> realItemList = new ArrayList<>();
-                for (PageQueryOrdersResponse.Order.Item item : order.getItems()) {
-                    if (shopGoodsIdList.contains(item.getItemId().toString())) {
-                        realItemList.add(item);
-                    }
-                }
+                // // 重新设置订单下商品，只保留erp商品库中存在的商品
+                // List<PageQueryOrdersResponse.Order.Item> realItemList = new ArrayList<>();
+                // for (PageQueryOrdersResponse.Order.Item item : order.getItems()) {
+                //     if (shopGoodsIdList.contains(item.getItemId().toString())) {
+                //         realItemList.add(item);
+                //     }
+                // }
                 // 判断订单下过滤后的商品是否为空
                 // 若为空则跳过该订单
-                if (ObjectUtil.isEmpty(realItemList)) continue;
+                List<PageQueryOrdersResponse.Order.Item> items = order.getItems();
+                if (ObjectUtil.isEmpty(items)) continue;
                 // 若不为空保留订单并进行处理
                 TShopOrderVo tShopOrderVo = new TShopOrderVo();
                 BeanUtils.copyProperties(order, tShopOrderVo);
                 PageQueryOrdersResponse.Order.ReceiverInfo receiverInfo = order.getReceiverInfo();
-                List<PageQueryOrdersResponse.Order.Item> items = order.getItems();
                 // 店铺Id
                 tShopOrderVo.setShopId(shop.getId().toString());
                 // 店铺名称
@@ -269,7 +269,7 @@ public class OrderServiceImpl implements OrderService {
                 tShopOrderVo.setTradeType(0);
                 PageQueryOrdersResponse.Order orderItemList = new PageQueryOrdersResponse.Order();
                 orderItemList.setReceiverInfo(order.getReceiverInfo());
-                orderItemList.setItems(realItemList);
+                orderItemList.setItems(items);
                 tShopOrderVo.setItemList(JSONObject.toJSONString(orderItemList));
                 realOrderList.add(tShopOrderVo);
             }
