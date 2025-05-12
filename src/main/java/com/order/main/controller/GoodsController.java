@@ -95,7 +95,21 @@ public class GoodsController {
 
             String iamge = imagesArr[i];
 
-            Map dataMap = JsonUtil.transferToObj(goodsService.upload(iamge,request.getToken()), Map.class);
+            Map dataMap;
+            try{
+                dataMap = JsonUtil.transferToObj(goodsService.upload(iamge,request.getToken()), Map.class);
+            }catch (Exception e){
+                System.out.println("上传图片异常---------------");
+                e.printStackTrace();
+                continue;
+            }
+
+            Map errorResponse = (Map) dataMap.get("errorResponse");
+            if(errorResponse != null){
+                System.out.println("上传图片报错---------errorResponse------："+errorResponse);
+                continue;
+            }
+
             Map successResponse = (Map) dataMap.get("successResponse");
             Map kongkzImage = (Map) successResponse.get("image");
 
