@@ -148,7 +148,7 @@ public class GoodsController {
 
 
         Map dataMap = JsonUtil.transferToObj(goodsService.itemAdd(request), Map.class);
-        System.out.println("-----------------------调用上传商品接口");
+        System.out.println("-----------------------调用上传商品接口："+JsonUtil.transferToJson(dataMap));
         Map errorResponse  = (Map) dataMap.get("errorResponse");
         if(errorResponse != null){
             System.out.println("---------------------上传报错");
