@@ -10,6 +10,7 @@ import com.order.main.service.GoodsService;
 import com.order.main.service.client.ErpClient;
 import com.order.main.service.client.PhpClient;
 import com.order.main.util.*;
+import com.pdd.pop.sdk.common.util.JsonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -134,6 +135,18 @@ public class GoodsServiceImpl implements GoodsService {
             }
         }
         return shopGoodsList;
+    }
+
+    /**
+     * 获取店铺详情
+     */
+    @Override
+    public String getShopInfo(String token){
+        KfzBaseResponse<GetShopInfoResponse> response = phpClient.getShopInfo(ClientConstantUtils.PHP_URL, token);
+        if(response.getErrorResponse() != null){
+            return "";
+        }
+        return JsonUtil.transferToJson(response.getSuccessResponse());
     }
 
     @Override

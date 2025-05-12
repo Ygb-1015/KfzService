@@ -31,6 +31,11 @@ public class GoodsController {
         return goodsService.synchronizationGoods(shopId);
     }
 
+    @GetMapping("getShopInfo/{token}")
+    public String getShopInfo(@PathVariable("token") String token){
+        return goodsService.getShopInfo(token);
+    }
+
     /**
      * 更新商品货号
      *
@@ -143,7 +148,7 @@ public class GoodsController {
 
 
         Map dataMap = JsonUtil.transferToObj(goodsService.itemAdd(request), Map.class);
-
+        System.out.println("-----------------------调用上传商品接口");
         Map errorResponse  = (Map) dataMap.get("errorResponse");
         if(errorResponse != null){
             System.out.println("---------------------上传报错");
@@ -159,6 +164,7 @@ public class GoodsController {
             callBackMap.put("itemId", item.get("itemId"));
             callBackMap.put("userId", map.get("userId").toString());
             //调用接口
+            System.out.println("-----------------------调用新增发布商品接口");
             InterfaceUtils.getInterfacePost("/api/kongfz/goodAddCallBack", callBackMap);
         }
     }

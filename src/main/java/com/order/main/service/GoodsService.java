@@ -2,6 +2,7 @@ package com.order.main.service;
 
 import com.order.main.dto.requst.GoodsItemAddRequest;
 import com.order.main.dto.requst.UpdateArtNoRequest;
+import com.order.main.dto.response.GetShopInfoResponse;
 
 import java.util.Map;
 
@@ -10,6 +11,11 @@ public interface GoodsService {
     Boolean synchronizationGoods(Long shopId);
 
     Boolean updateArtNo(UpdateArtNoRequest request);
+
+    /**
+     * 获取店铺详情
+     */
+    public String getShopInfo(String token);
 
     /**
      * 获取运费模板
