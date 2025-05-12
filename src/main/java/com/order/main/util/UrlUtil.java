@@ -14,7 +14,6 @@ public final class UrlUtil {
     }
 
     public static String getPath(){
-        return "https://api.buzhiyushu.cn";
-//        return "http://localhost:8080";
+        return ClientConstantUtils.ERP_URL;
     }
 }
