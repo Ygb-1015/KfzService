@@ -117,6 +117,11 @@ public class GoodsItemAddRequest {
      */
     private String binding;
 
+    /**
+     * 定价
+     */
+    private String oriPrice;
+
 
     public String getToken() {
         return token;
@@ -300,5 +305,13 @@ public class GoodsItemAddRequest {
 
     public void setPress(String press) {
         this.press = press;
+    }
+
+    public String getOriPrice() {
+        return oriPrice;
+    }
+
+    public void setOriPrice(String oriPrice) {
+        this.oriPrice = oriPrice;
     }
 }

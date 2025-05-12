@@ -91,6 +91,7 @@ public class GoodsController {
         request.setQualityDesc(map.get("qualityDesc") == null ? "" : map.get("qualityDesc").toString());
         request.setItemSn(map.get("itemSn") == null ? "" : map.get("itemSn").toString());
         request.setImgUrl(map.get("imgUrl") == null ? "" : map.get("imgUrl").toString());
+        request.setOriPrice(map.get("oriPrice") == null ? "" : map.get("oriPrice").toString());
 
         //获取实拍图网路路径
         String[] imagesArr = map.get("images") == null ? new String[0] : map.get("images").toString().split(";");
