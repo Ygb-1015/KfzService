@@ -20,8 +20,8 @@ public class KongfzTaskRunnable implements Runnable {
     }
     @Override
     public void run() {
-//        // 执行任务
-//        pddService.goodsAddMain(map,dataMap);
+        // 执行任务
+        goodsService.goodsAddMain(map,dataMap);
     }
 }
 

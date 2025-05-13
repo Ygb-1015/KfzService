@@ -37,6 +37,12 @@ public interface GoodsService {
     String itemAdd(GoodsItemAddRequest request);
 
     /**
+     * 商品发布接口
+     * @param map
+     */
+    void goodsAddOne(Map map);
+
+    /**
      * 发布商品接口
      * @param map
      */

@@ -3,7 +3,10 @@ package com.order.main.controller;
 import com.order.main.dto.requst.GoodsItemAddRequest;
 import com.order.main.dto.requst.UpdateArtNoRequest;
 import com.order.main.service.GoodsService;
+import com.order.main.threads.KongfzTaskRunnable;
+import com.order.main.util.EasyExcelUtil;
 import com.order.main.util.InterfaceUtils;
+import com.order.main.util.UrlUtil;
 import com.pdd.pop.sdk.common.util.JsonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -76,98 +79,7 @@ public class GoodsController {
      */
     @PostMapping("/goodAddOne")
     public void goodAddOne(@RequestBody Map map) {
-
-        GoodsItemAddRequest request = new GoodsItemAddRequest();
-
-        request.setToken(map.get("token").toString());
-        request.setTpl(map.get("tpl").toString());
-        request.setCatId("43000000000000000");
-        request.setMyCatId(map.get("myCatId") == null ? "" : map.get("myCatId").toString());
-        request.setItemName(map.get("itemName") == null ? "" : map.get("itemName").toString());
-        request.setImportantDesc(map.get("importantDesc") == null ? "" : map.get("importantDesc").toString());
-        request.setPrice(new BigDecimal(map.get("price").toString()).divide(new BigDecimal(100)).toString());
-        request.setNumber(map.get("number") == null ? "" : map.get("number").toString());
-        request.setQuality(map.get("quality") == null ? "" : map.get("quality").toString());
-        request.setQualityDesc(map.get("qualityDesc") == null ? "" : map.get("qualityDesc").toString());
-        request.setItemSn(map.get("itemSn") == null ? "" : map.get("itemSn").toString());
-        request.setImgUrl(map.get("imgUrl") == null ? "" : map.get("imgUrl").toString());
-        request.setOriPrice(map.get("oriPrice") == null ? "" : map.get("oriPrice").toString());
-
-        //获取实拍图网路路径
-        String[] imagesArr = map.get("images") == null ? new String[0] : map.get("images").toString().split(";");
-
-        String images = "";
-        for(int i=0;i<imagesArr.length;i++){
-
-            String iamge = imagesArr[i];
-
-            Map dataMap;
-            try{
-                dataMap = JsonUtil.transferToObj(goodsService.upload(iamge,request.getToken()), Map.class);
-            }catch (Exception e){
-                System.out.println("上传图片异常---------------");
-                e.printStackTrace();
-                continue;
-            }
-
-            Map errorResponse = (Map) dataMap.get("errorResponse");
-            if(errorResponse != null){
-                System.out.println("上传图片报错---------errorResponse------："+errorResponse);
-                continue;
-            }
-
-            Map successResponse = (Map) dataMap.get("successResponse");
-            Map kongkzImage = (Map) successResponse.get("image");
-
-            if(i==0){
-                images = kongkzImage.get("url").toString();
-            }else{
-                images = images + ";" + kongkzImage.get("url").toString();
-            }
-            //当图片数量不足八张时
-            if(i == imagesArr.length-1 && i < 8){
-                for(int j=i;j<7;j++){
-                    images = images + ";" + kongkzImage.get("url").toString();
-                }
-            }
-        }
-
-        request.setImages(images);
-
-        request.setItemDesc(map.get("itemDesc") == null ? "" : map.get("itemDesc").toString());
-        request.setBearShipping(map.get("bearShipping").toString());
-        request.setMouldId(Long.parseLong(map.get("mouldld").toString()));
-        request.setWeight(map.get("weight") == null ? BigDecimal.ZERO : new BigDecimal(map.get("weight").toString()));
-        request.setWeightPiece(map.get("weightPiece") == null ? BigDecimal.ZERO : new BigDecimal(map.get("weightPiece").toString()));
-
-        request.setIsbn(map.get("isbn") == null ? "" : map.get("isbn").toString());
-        request.setAuthor(map.get("author") == null ? "" : map.get("author").toString());
-        request.setPress(map.get("press") == null ? "" : map.get("press").toString());
-        request.setPubDate(map.get("pubDate") == null ? "" : map.get("pubDate").toString());
-        request.setBinding(map.get("binding") == null ? "" : map.get("binding").toString());
-
-
-
-        Map dataMap = JsonUtil.transferToObj(goodsService.itemAdd(request), Map.class);
-        System.out.println("-----------------------调用上传商品接口："+JsonUtil.transferToJson(dataMap));
-        Map errorResponse  = (Map) dataMap.get("errorResponse");
-        if(errorResponse != null){
-            System.out.println("---------------------上传报错");
-            System.out.println(JsonUtil.transferToJson(errorResponse)+"------------");
-        }else{
-            System.out.println("---------------------上传成功");
-            Map successResponse = (Map) dataMap.get("successResponse");
-            Map item = (Map) successResponse.get("item");
-
-            Map callBackMap = new HashMap();
-            callBackMap.put("shopId", map.get("shopId").toString());
-            callBackMap.put("goodId", map.get("goodId").toString());
-            callBackMap.put("itemId", item.get("itemId"));
-            callBackMap.put("userId", map.get("userId").toString());
-            //调用接口
-            System.out.println("-----------------------调用新增发布商品接口");
-            InterfaceUtils.getInterfacePost("/api/kongfz/goodAddCallBack", callBackMap);
-        }
+        goodsService.goodsAddOne(map);
     }
 
     /**
@@ -176,5 +88,21 @@ public class GoodsController {
     @PostMapping("/itemNumberUpdate")
     public void itemNumberUpdate(@RequestBody Map map){
         goodsService.itemNumberUpdate(map.get("token").toString(),map.get("itemId").toString(),map.get("number").toString());
+    }
+
+    /**
+     * 列表勾选上传商品
+     */
+    @PostMapping("/goodAddList")
+    public String goodAddList(@RequestBody Map<String, Object> fiterMap){
+        String fileName = fiterMap.get("fileName").toString();
+        // 读取数据
+        Map map = EasyExcelUtil.readFileContentMap(UrlUtil.getUrl() + fileName + ".txt");
+        // 创建并启动线程
+        KongfzTaskRunnable taskRunnable = new KongfzTaskRunnable(goodsService, map, fiterMap);
+        Thread thread = new Thread(taskRunnable);
+        thread.start();
+        System.out.println(thread.getId());
+        return String.valueOf(thread.getId());
     }
 }
