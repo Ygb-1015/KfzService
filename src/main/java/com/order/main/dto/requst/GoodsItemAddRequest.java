@@ -122,6 +122,11 @@ public class GoodsItemAddRequest {
      */
     private String oriPrice;
 
+    /**
+     * 用户填写名称
+     */
+    private String otherName;
+
 
     public String getToken() {
         return token;
@@ -313,5 +318,13 @@ public class GoodsItemAddRequest {
 
     public void setOriPrice(String oriPrice) {
         this.oriPrice = oriPrice;
+    }
+
+    public String getOtherName() {
+        return otherName;
+    }
+
+    public void setOtherName(String otherName) {
+        this.otherName = otherName;
     }
 }
