@@ -64,6 +64,11 @@ public interface GoodsService {
      */
     String itemNumberUpdate(String token,String itemId,String number);
 
+    /**
+     * 调用php接口，根据isbn查询孔夫子书籍数据
+     */
+    String getBookInfoF(String isbn);
+
     void zanTing(String threadId);
 
     void huanXing(String threadId);

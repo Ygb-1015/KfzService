@@ -6,6 +6,7 @@ import com.order.main.service.GoodsService;
 import com.order.main.threads.KongfzTaskRunnable;
 import com.order.main.util.EasyExcelUtil;
 import com.order.main.util.InterfaceUtils;
+import com.order.main.util.StringUtils;
 import com.order.main.util.UrlUtil;
 import com.pdd.pop.sdk.common.util.JsonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -88,6 +89,20 @@ public class GoodsController {
     @PostMapping("/itemNumberUpdate")
     public void itemNumberUpdate(@RequestBody Map map){
         goodsService.itemNumberUpdate(map.get("token").toString(),map.get("itemId").toString(),map.get("number").toString());
+    }
+
+    /**
+     * 调用php接口，根据isbn查询孔夫子书籍数据
+     */
+    @GetMapping("/getBookInfoF/{isbn}")
+    public String getBookInfoF(@PathVariable("isbn") String isbn){
+        try{
+            String mark = goodsService.getBookInfoF(isbn);
+            mark = StringUtils.convertUnicodeToChinese(mark);
+            return mark;
+        }catch (Exception e){
+            return "";
+        }
     }
 
     /**

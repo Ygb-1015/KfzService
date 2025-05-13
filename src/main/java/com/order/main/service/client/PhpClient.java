@@ -61,4 +61,11 @@ public interface PhpClient {
      */
     @Post(value = "{myURL}/shop/itemNumberUpdate", dataType = "json")
     String itemNumberUpdate(@Var("myURL") String myURL ,@Query("token") String token , @Query("itemId") String itemId , @Query("number") String number);
+
+    /**
+     * 调用php接口，根据isbn查询孔夫子书籍数据
+     */
+    @Get(value = "{myURL}/bookBase/getBookInfoF", dataType = "json")
+    String getBookInfoF(@Var("myURL") String myURL, @Query("isbn") String isbn);
+
 }

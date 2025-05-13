@@ -223,8 +223,14 @@ public class GoodsServiceImpl implements GoodsService {
         return phpClient.upload(ClientConstantUtils.PHP_URL, file,token);
     }
 
+    @Override
     public String itemNumberUpdate(String token,String itemId,String number){
         return phpClient.itemNumberUpdate(ClientConstantUtils.PHP_URL, token,itemId,number);
+    }
+
+    @Override
+    public String getBookInfoF(String isbn){
+        return phpClient.getBookInfoF(ClientConstantUtils.PHP_URL, isbn);
     }
 
     @Override
