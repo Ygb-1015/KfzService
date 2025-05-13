@@ -10,7 +10,7 @@ spring:
   redis:
     host: 111.229.25.150  # Redis服务器地址
     port: 6379  # Redis服务器端口
-    database: 1 # 默认数据库索引，可根据需要指定不同的数据库
+    database: 0 # 默认数据库索引，可根据需要指定不同的数据库
     password: Qq123123  # 如果设置了密码，请在此处填写
     timeout: 10s  # 连接超时时间
     lettuce:

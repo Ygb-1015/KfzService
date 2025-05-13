@@ -130,9 +130,9 @@ public class OrderServiceImpl implements OrderService {
         }
 
         while (isHaveNext) {
-            KfzBaseResponse<PageQueryOrdersResponse> ordersResponse = phpClient.pageQueryOrders(ClientConstantUtils.PHP_URL, token, UserTypeEnum.SELLER.getCode(), pageNum, 10, startUpdateTime);
-            log.info("查询孔夫子店铺订单响应-{}", JSONObject.toJSONString(ordersResponse));
+            KfzBaseResponse<PageQueryOrdersResponse> ordersResponse = phpClient.pageQueryOrders(ClientConstantUtils.PHP_URL, token, UserTypeEnum.SELLER.getCode(), pageNum, 100, startUpdateTime);
             if (!isRefreshToken && ObjectUtil.isNotEmpty(ordersResponse.getErrorResponse())) {
+                log.info("查询孔夫子店铺订单响应失败-{}", JSONObject.toJSONString(ordersResponse.getErrorResponse()));
                 List<Long> tokenErrorCode = new ArrayList<>();
                 tokenErrorCode.add(1000L);
                 tokenErrorCode.add(1001L);
@@ -180,8 +180,6 @@ public class OrderServiceImpl implements OrderService {
             List<TShopOrderVo> realOrderList = new ArrayList<>();
             // 根据商品Id过滤订单列表
             for (PageQueryOrdersResponse.Order order : allOrderList) {
-                // 重新设置订单下商品，只保留erp商品库中存在的商品
-                // List<PageQueryOrdersResponse.Order.Item> realItemList = new ArrayList<>();
                 // 商品信息存储实体
                 ItemListVo<PageQueryOrdersResponse.Order.Item> realItemList = new ItemListVo<>();
                 // 用于存放订单下未知来源异常商品

@@ -101,8 +101,8 @@ public class GoodsServiceImpl implements GoodsService {
             request.setShopId(shopId);
             request.setUserId(shopInfo.getCreateBy());
             request.setZhishuShopGoodsRequestList(zhishuShopGoodsRequestList);
+            request.setCurrentDateTime(currentDateTime);
             erpClient.goodsComparison(ClientConstantUtils.ERP_URL, request);
-            redisUtils.setCacheObject("lastGoodsSynTime_" + shopInfo.getId(), currentDateTime);
         });
 
         return true;

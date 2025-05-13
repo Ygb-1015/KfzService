@@ -12,6 +12,8 @@ public class GoodsComparisonRequest {
 
     private Long userId;
 
+    private String currentDateTime;
+
     private List<ZhishuShopGoodsRequest> zhishuShopGoodsRequestList;
 
 }
