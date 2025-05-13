@@ -235,6 +235,7 @@ public class GoodsServiceImpl implements GoodsService {
 
     @Override
     public void goodsAddOne(Map map){
+
         GoodsItemAddRequest request = new GoodsItemAddRequest();
 
         request.setToken(map.get("token").toString());
@@ -302,8 +303,9 @@ public class GoodsServiceImpl implements GoodsService {
         request.setAuthor(map.get("author") == null ? "" : map.get("author").toString());
         request.setPress(map.get("press") == null ? "" : map.get("press").toString());
         request.setPubDate(map.get("pubDate") == null ? "" : map.get("pubDate").toString());
-        request.setBinding(map.get("binding") == null ? "" : map.get("binding").toString());
-        request.setBinding(map.get("otherName") == null ? "" : map.get("otherName").toString());
+
+        request.setBinding(map.get("binding") == null || StringUtils.isEmpty(map.get("binding").toString()) ? "平装" : map.get("binding").toString());
+        request.setOtherName(map.get("otherName") == null ? "" : map.get("otherName").toString());
 
 
         Map dataMap = JsonUtil.transferToObj(itemAdd(request), Map.class);
