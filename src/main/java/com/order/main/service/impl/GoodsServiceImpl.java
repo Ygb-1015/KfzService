@@ -303,7 +303,7 @@ public class GoodsServiceImpl implements GoodsService {
         request.setPress(map.get("press") == null ? "" : map.get("press").toString());
         request.setPubDate(map.get("pubDate") == null ? "" : map.get("pubDate").toString());
         request.setBinding(map.get("binding") == null ? "" : map.get("binding").toString());
-
+        request.setBinding(map.get("otherName") == null ? "" : map.get("otherName").toString());
 
 
         Map dataMap = JsonUtil.transferToObj(itemAdd(request), Map.class);
