@@ -13,16 +13,16 @@ public class ItemListVo<T> {
 
     private List<T> orderItems;
 
-    private List<ExceptionItem<T>> itemList;
+    private List<ExceptionItem> itemList;
 
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class ExceptionItem<T> {
+    public static class ExceptionItem {
 
         private String orderExceptionType;
 
-        private List<T> orderItems;
+        private List<String> orderItemId;
 
     }
 

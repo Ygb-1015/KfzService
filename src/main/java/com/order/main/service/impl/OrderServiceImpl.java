@@ -3,9 +3,7 @@ package com.order.main.service.impl;
 import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.order.main.dto.bo.*;
-import com.order.main.dto.requst.GetShopGoodsListRequest;
 import com.order.main.dto.requst.OrderListByShopIdRequest;
-import com.order.main.dto.response.GetShopGoodsListResponse;
 import com.order.main.dto.response.KfzBaseResponse;
 import com.order.main.dto.response.PageQueryOrdersResponse;
 import com.order.main.dto.response.ShopVo;
@@ -14,10 +12,9 @@ import com.order.main.service.OrderService;
 import com.order.main.service.client.ErpClient;
 import com.order.main.service.client.PhpClient;
 import com.order.main.util.ClientConstantUtils;
+import com.order.main.util.RedisUtils;
 import com.order.main.util.ThreadPoolUtils;
 import com.order.main.util.TokenUtils;
-import com.pdd.pop.sdk.http.api.pop.response.PddOrderInformationGetResponse;
-import com.pdd.pop.sdk.http.api.pop.response.PddOrderListGetResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -28,6 +25,10 @@ import java.math.BigDecimal;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -45,6 +46,18 @@ public class OrderServiceImpl implements OrderService {
     @Autowired
     private TokenUtils tokenUtils;
 
+    @Autowired
+    private RedisUtils redisUtils;
+
+    // 可以自定义一个常量作为锁的前缀
+    private static final String LOCK_KEY_PREFIX = "lock:fullSynchronizationOrder:";
+
+    // 设置锁的过期时间（单位：秒），防止死锁
+    private static final int LOCK_EXPIRE_SECONDS = 120;
+
+    // 每隔多少秒续期一次 Redis 锁（比如 30 秒）
+    private static final int INITIAL_DELAY_AND_PERIOD = 30;
+
     @Override
     public void fullSynchronizationOrder(List<Long> shopIdList) {
         if (ObjectUtil.isEmpty(shopIdList)) {
@@ -52,28 +65,66 @@ public class OrderServiceImpl implements OrderService {
             return;
         }
         for (Long shopId : shopIdList) {
-            ThreadPoolUtils.execute(() -> {
-                System.out.println("线程ID-" + Thread.currentThread().getId() + ":同步店铺订单-shopId");
-                // 根据shopId获取店铺信息
-                ShopVo shop = erpClient.getShopInfo(ClientConstantUtils.ERP_URL, shopId);
+                ThreadPoolUtils.execute(() -> {
 
-                // 如果店铺不存在，抛出异常
-                if (shop == null) {
-                    // 记录错误日志
-                    log.error("店铺不存在，shopId: {}", shopId);
-                    // 抛出异常
-                    throw new RuntimeException("店铺不存在");
-                }
-                try {
-                    // 调用孔夫子增量订单接口
-                    synOrder(shop);
-                } catch (Exception e) {
-                    // 记录错误日志
-                    log.error("同步店铺订单失败，shopId: {}", shopId, e);
-                    // 抛出异常
-                    throw new RuntimeException("同步订单失败: " + e.getMessage(), e);
-                }
-            });
+                    // 加上redis锁防止重复调用
+                    String lockKey = LOCK_KEY_PREFIX  + shopId;
+                    String lockValue = "locked";
+                    // 尝试获取锁
+                    String syncOrderLock = (String) redisUtils.getCacheObject(lockKey);
+                    if (ObjectUtil.isNotNull(syncOrderLock)) return;
+                    // 若没有锁，存入新的锁，并设置过期时间
+                    redisUtils.setCacheObject(lockKey, lockValue, LOCK_EXPIRE_SECONDS, TimeUnit.SECONDS);
+                    ScheduledExecutorService scheduler = null;
+                    ScheduledFuture<?> future = null;
+                    try {
+                        scheduler = Executors.newScheduledThreadPool(1);
+                        // 设置一个定时任务来不断延长锁的过期时间
+                        Runnable renewLockTask = () -> {
+                            redisUtils.setCacheObject(lockKey, lockValue, LOCK_EXPIRE_SECONDS, TimeUnit.SECONDS);
+                            System.out.println("Redis锁过期时间已更新");
+                        };
+                        // 启动定时任务
+                        future = scheduler.scheduleAtFixedRate(renewLockTask, 0, INITIAL_DELAY_AND_PERIOD, TimeUnit.SECONDS);
+
+                        System.out.println("线程ID-" + Thread.currentThread().getId() + ":同步店铺订单-shopId");
+                        // 根据shopId获取店铺信息
+                        ShopVo shop = erpClient.getShopInfo(ClientConstantUtils.ERP_URL, shopId);
+
+                        // 如果店铺不存在，抛出异常
+                        if (shop == null) {
+                            // 记录错误日志
+                            log.error("店铺不存在，shopId: {}", shopId);
+                            // 抛出异常
+                            throw new RuntimeException("店铺不存在");
+                        }
+                        try {
+                            // 调用孔夫子增量订单接口
+                            synOrder(shop);
+                        } catch (Exception e) {
+                            // 记录错误日志
+                            log.error("同步店铺订单失败，shopId: {}", shopId, e);
+                            // 抛出异常
+                            throw new RuntimeException("同步订单失败: " + e.getMessage(), e);
+                        }
+                    } catch (Exception e) {
+                        // 捕获其他未知异常
+                        log.error("同步店铺订单失败，shopId: {}", shopId, e);
+                    } finally {
+                        // 取消定时任务
+                        if (future != null) {
+                            future.cancel(false);
+                        }
+                        // 关闭线程池
+                        if (scheduler != null) {
+                            scheduler.shutdownNow();
+                        }
+                        // 确保释放锁
+                        redisUtils.deleteCacheObject(lockKey);
+                        System.out.println("已释放redis锁");
+                    }
+                });
+
         }
     }
 
@@ -130,7 +181,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         while (isHaveNext) {
-            KfzBaseResponse<PageQueryOrdersResponse> ordersResponse = phpClient.pageQueryOrders(ClientConstantUtils.PHP_URL, token, UserTypeEnum.SELLER.getCode(), pageNum, 100, startUpdateTime);
+            KfzBaseResponse<PageQueryOrdersResponse> ordersResponse = phpClient.pageQueryOrders(ClientConstantUtils.PHP_URL, token, UserTypeEnum.SELLER.getCode(), pageNum, 50, startUpdateTime);
             if (!isRefreshToken && ObjectUtil.isNotEmpty(ordersResponse.getErrorResponse())) {
                 log.info("查询孔夫子店铺订单响应失败-{}", JSONObject.toJSONString(ordersResponse.getErrorResponse()));
                 List<Long> tokenErrorCode = new ArrayList<>();
@@ -183,10 +234,10 @@ public class OrderServiceImpl implements OrderService {
                 // 商品信息存储实体
                 ItemListVo<PageQueryOrdersResponse.Order.Item> realItemList = new ItemListVo<>();
                 // 用于存放订单下未知来源异常商品
-                List<PageQueryOrdersResponse.Order.Item> unknownSourceExceptionItems = new ArrayList<>();
+                List<String> unknownSourceExceptionItemIds = new ArrayList<>();
                 for (PageQueryOrdersResponse.Order.Item item : order.getItems()) {
                     if (!shopGoodsIdList.contains(item.getItemId().toString())) {
-                        unknownSourceExceptionItems.add(item);
+                        unknownSourceExceptionItemIds.add(item.getItemId().toString());
                     }
                 }
                 // 判断订单下过滤后的商品是否为空
@@ -282,17 +333,17 @@ public class OrderServiceImpl implements OrderService {
                 // 封装商品信息转成JSON存储在订单数据实体类中
                 realItemList.setOrderItems(items);
                 // 封装未知商品来源商品信息
-                ItemListVo.ExceptionItem<PageQueryOrdersResponse.Order.Item> goodsSourceUnknownExceptionItem = new ItemListVo.ExceptionItem<>();
+                ItemListVo.ExceptionItem goodsSourceUnknownExceptionItem = new ItemListVo.ExceptionItem();
                 goodsSourceUnknownExceptionItem.setOrderExceptionType(OrderExceptionTypeEnum.GOODS_SOURCE_UNKNOWN_EXCEPTION.getCode());
-                goodsSourceUnknownExceptionItem.setOrderItems(unknownSourceExceptionItems);
-                List<ItemListVo.ExceptionItem<PageQueryOrdersResponse.Order.Item>> itemList = new ArrayList<>();
-                itemList.add(goodsSourceUnknownExceptionItem);
+                goodsSourceUnknownExceptionItem.setOrderItemId(unknownSourceExceptionItemIds);
+                List<ItemListVo.ExceptionItem> exceptionItemList = new ArrayList<>();
+                exceptionItemList.add(goodsSourceUnknownExceptionItem);
                 // 尝试去旧订单中获取订单id，看是否能获取到
                 Long orderId = oldOrderMap.get(order.getOrderId().toString());
                 // 查询订单是否已存在
                 // 封装操作库存失败商品信息
                 // 用于存放订单下未知来源异常商品
-                List<PageQueryOrdersResponse.Order.Item> inventoryExceptionItems = new ArrayList<>();
+                List<String> inventoryExceptionItemIds = new ArrayList<>();
                 OperatingInventoryVo operatingInventoryVo = new OperatingInventoryVo();
                 // TODO 暂时只做新订单扣减库存操作
                 // 查询旧订单看是否已存在
@@ -311,22 +362,33 @@ public class OrderServiceImpl implements OrderService {
                             erpClient.OperatingInventory(ClientConstantUtils.ERP_URL, operatingInventoryVo);
                         } catch (Exception e) {
                             log.error("收到孔夫子推送订单消息，操作库存失败：孔夫子订单-{},操作库存请求-{}，异常信息-{}", JSONObject.toJSONString(order), JSONObject.toJSONString(operatingInventoryVo), e.getMessage());
-                            inventoryExceptionItems.add(item);
+                            inventoryExceptionItemIds.add(item.getItemId().toString());
                         }
                     }
                 }
-                ItemListVo.ExceptionItem<PageQueryOrdersResponse.Order.Item> inventoryExceptionItem = new ItemListVo.ExceptionItem<>();
+                ItemListVo.ExceptionItem inventoryExceptionItem = new ItemListVo.ExceptionItem();
                 inventoryExceptionItem.setOrderExceptionType(OrderExceptionTypeEnum.INVENTORY_EXCEPTION.getCode());
-                inventoryExceptionItem.setOrderItems(inventoryExceptionItems);
-                itemList.add(inventoryExceptionItem);
-                realItemList.setItemList(itemList);
+                inventoryExceptionItem.setOrderItemId(inventoryExceptionItemIds);
+                exceptionItemList.add(inventoryExceptionItem);
+                realItemList.setItemList(exceptionItemList);
                 tShopOrderVo.setItemList(JSONObject.toJSONString(realItemList));
+                // 判断是否存在异常商品
+                // 订单异常类型枚举集合
+                List<String> exceptionTypeList = new ArrayList<>();
+                if (!unknownSourceExceptionItemIds.isEmpty()) {
+                    // 商品未知来源异常
+                    exceptionTypeList.add(OrderExceptionTypeEnum.GOODS_SOURCE_UNKNOWN_EXCEPTION.getCode());
+                } else if (!inventoryExceptionItemIds.isEmpty()) {
+                    // 商品库存操作异常
+                    exceptionTypeList.add(OrderExceptionTypeEnum.INVENTORY_EXCEPTION.getCode());
+                }
+                tShopOrderVo.setOrderExceptionType(JSONObject.toJSONString(exceptionTypeList));
                 realOrderList.add(tShopOrderVo);
             }
             // 新增并更新订单
             erpClient.insertOrUpdateOrderBatch(ClientConstantUtils.ERP_URL, realOrderList);
         }
         // 更新最后同步时间
-        erpClient.updateTime(ClientConstantUtils.ERP_URL, shop.getId(), now.getEpochSecond());
+        erpClient.updateTime(ClientConstantUtils.ERP_URL, shop.getId(), now.toEpochMilli());
     }
 }
