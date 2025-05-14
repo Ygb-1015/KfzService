@@ -197,6 +197,11 @@ public class TShopOrderVo implements Serializable {
     private String promiseDeliveryTime;
 
     /**
+     * 确认收货时间
+     */
+    private String receiveTime;
+
+    /**
      * 省份
      */
     private String province;
@@ -207,9 +212,24 @@ public class TShopOrderVo implements Serializable {
     private String provinceId;
 
     /**
-     * 确认收货时间
+     * 市
      */
-    private String receiveTime;
+    private String city;
+
+    /**
+     * 市编码
+     */
+    private String cityId;
+
+    /**
+     * 区，乡镇
+     */
+    private String town;
+
+    /**
+     * 区县编码
+     */
+    private String townId;
 
     /**
      * 收件人地址
@@ -290,16 +310,6 @@ public class TShopOrderVo implements Serializable {
      * 全国联保，1:是，0:否
      */
     private Integer supportNationwideWarranty;
-
-    /**
-     * 区，乡镇
-     */
-    private String town;
-
-    /**
-     * 区县编码
-     */
-    private String townId;
 
     /**
      * 快递单号

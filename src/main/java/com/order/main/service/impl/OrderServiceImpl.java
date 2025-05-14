@@ -261,6 +261,8 @@ public class OrderServiceImpl implements OrderService {
                     tShopOrderVo.setReceiverAddressMask(receiverInfo.getAddress());
                     // 省份
                     tShopOrderVo.setProvince(receiverInfo.getProvName());
+                    // 市
+                    tShopOrderVo.setCity(receiverInfo.getCityName());
                     // 区，乡镇
                     tShopOrderVo.setTown(receiverInfo.getAreaName());
                     // 收件人姓名
