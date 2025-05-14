@@ -378,7 +378,8 @@ public class OrderServiceImpl implements OrderService {
                 if (!unknownSourceExceptionItemIds.isEmpty()) {
                     // 商品未知来源异常
                     exceptionTypeList.add(OrderExceptionTypeEnum.GOODS_SOURCE_UNKNOWN_EXCEPTION.getCode());
-                } else if (!inventoryExceptionItemIds.isEmpty()) {
+                }
+                if (!inventoryExceptionItemIds.isEmpty()) {
                     // 商品库存操作异常
                     exceptionTypeList.add(OrderExceptionTypeEnum.INVENTORY_EXCEPTION.getCode());
                 }
