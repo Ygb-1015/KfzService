@@ -240,7 +240,8 @@ public class GoodsServiceImpl implements GoodsService {
 
         request.setToken(map.get("token").toString());
         request.setTpl(map.get("tpl").toString());
-        request.setCatId("43000000000000000");
+        request.setCatId(map.get("catId") == null || map.get("catId").equals("") ? "43000000000000000" : map.get("catId").toString());
+        System.out.println("分类id："+ request.getCatId());
         request.setMyCatId(map.get("myCatId") == null ? "" : map.get("myCatId").toString());
         request.setItemName(map.get("itemName") == null ? "" : map.get("itemName").toString());
         request.setImportantDesc(map.get("importantDesc") == null ? "" : map.get("importantDesc").toString());
