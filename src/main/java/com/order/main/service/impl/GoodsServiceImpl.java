@@ -234,7 +234,7 @@ public class GoodsServiceImpl implements GoodsService {
     }
 
     @Override
-    public void goodsAddOne(Map map){
+    public String goodsAddOne(Map map){
 
         GoodsItemAddRequest request = new GoodsItemAddRequest();
 
@@ -252,6 +252,7 @@ public class GoodsServiceImpl implements GoodsService {
         request.setItemSn(map.get("itemSn") == null ? "" : map.get("itemSn").toString());
         request.setImgUrl(map.get("imgUrl") == null ? "" : map.get("imgUrl").toString());
         request.setOriPrice(map.get("oriPrice") == null ? "" : map.get("oriPrice").toString());
+
 
         //获取实拍图网路路径
         String[] imagesArr = map.get("images") == null ? new String[0] : map.get("images").toString().split(";");
@@ -291,6 +292,9 @@ public class GoodsServiceImpl implements GoodsService {
                 }
             }
         }
+        if(images.equals("")){
+            return "图片上传失败";
+        }
 
         request.setImages(images);
 
@@ -315,6 +319,7 @@ public class GoodsServiceImpl implements GoodsService {
         if(errorResponse != null){
             System.out.println("---------------------上传报错");
             System.out.println(JsonUtil.transferToJson(errorResponse)+"------------");
+            return "上传失败："+errorResponse.get("msg");
         }else{
             System.out.println("---------------------上传成功");
             Map successResponse = (Map) dataMap.get("successResponse");
@@ -328,27 +333,22 @@ public class GoodsServiceImpl implements GoodsService {
             //调用接口
             System.out.println("-----------------------调用新增发布商品接口");
             InterfaceUtils.getInterfacePost("/api/kongfz/goodAddCallBack", callBackMap);
+
+            return "上传成功";
         }
     }
 
     @Override
     public void goodsAddMain(Map map, Map dataMap) {
 
-        // 页面填写数据Map
-        Map htmlData = (Map) map.get("htmlData");
         // 任务信息对象
         Map taskBo = (Map) map.get("taskBo");
         // 店铺数据List
         List<Map> shopVoMapList = (List<Map>) map.get("shopVoList");
         // 数据过滤Map
         Map filterMap = (Map) dataMap.get("filterMap");
-
-        // 上架状态
-        String listStatus = htmlData.get("listStatus").toString();
-        // 图书类目
-        String bookCategory = htmlData.get("bookCategory").toString();
-        //自选类目
-        String bookCategoryAppoint = htmlData.get("bookCategoryAppoint") == null ? "" : htmlData.get("bookCategoryAppoint").toString();
+        // 获取用户id
+        String userId = map.get("userId").toString();
 
         // 图书数据List
         List<Map> bookBaseInfoVoList = (List<Map>) map.get("bookBaseInfoVoList");
@@ -385,7 +385,16 @@ public class GoodsServiceImpl implements GoodsService {
             String blackStr = filterMap.get(shopVoMap.get("id") + "-blackStr") != null ? filterMap.get(shopVoMap.get("id") + "-blackStr").toString() : "";
 
             //增加数据
-            goodsAdd(shopVoMap,bookBaseInfoVoList,listStatus,bookCategoryAppoint,filePath,String.valueOf(taskBo.get("id")),map,systemWhiteStr,systemBlackStr,whiteStr,blackStr,bookCategory);
+            goodsAdd(shopVoMap,
+                    bookBaseInfoVoList,
+                    filePath,
+                    String.valueOf(taskBo.get("id")),
+                    map,
+                    systemWhiteStr,
+                    systemBlackStr,
+                    whiteStr,
+                    blackStr,
+                    userId);
         }
 
         // 写入文件
@@ -404,8 +413,6 @@ public class GoodsServiceImpl implements GoodsService {
      *
      * @param shopVo              店铺信息
      * @param bookBaseInfoVoList      商品信息
-     * @param listStatus              上架状态
-     * @param bookCategoryAppoint     类目
      * @param filePath                店铺总数居excel路径
      * @param taskId                  任务id
      * @param map                     总数据map
@@ -413,12 +420,9 @@ public class GoodsServiceImpl implements GoodsService {
      * @param systemBlackStr            系统过滤黑名单
      * @param whiteStr                  用户自定义白名单
      * @param blackStr                  用户自定义黑名单
-     * @param bookCategory              图书类目： 0 自动分类  1 手动选择固定类目
      */
     public void goodsAdd(Map shopVo,
                          List<Map> bookBaseInfoVoList,
-                         String listStatus,
-                         String bookCategoryAppoint,
                          String filePath,
                          String taskId,
                          Map map,
@@ -426,7 +430,7 @@ public class GoodsServiceImpl implements GoodsService {
                          String systemBlackStr,
                          String whiteStr,
                          String blackStr,
-                         String bookCategory) {
+                         String userId) {
         //店铺详细设置数据
         Map shopDetailVo = (Map) map.get(shopVo.get("id")+"shopDetailVo");
         //销售模板数据
@@ -541,43 +545,45 @@ public class GoodsServiceImpl implements GoodsService {
                 }
             }
 
-            map.put("shopId",shopVo.get("id"));
-            map.put("goodId", bookBaseInfoVo.get("goodsId"));
-            map.put("token",shopVo.get("token"));
-            map.put("tpl",shopDetailVo.get("bookTemplate"));
-            map.put("catId","");
-            map.put("myCatId","");
+            Map kongfzAddGoodMap = new HashMap();
+            kongfzAddGoodMap.put("shopId",shopVo.get("id"));
+            kongfzAddGoodMap.put("goodId", bookBaseInfoVo.get("goodsId"));
+            kongfzAddGoodMap.put("token",shopVo.get("token"));
+            kongfzAddGoodMap.put("tpl",shopDetailVo.get("bookTemplate"));
+            kongfzAddGoodMap.put("catId","");
+            kongfzAddGoodMap.put("myCatId","");
             /**
              * 商品标题
              */
-            map.put("itemName",getGoodTitle(shopDetailVo,bookBaseInfoVo));
-            map.put("importantDesc",shopDetailVo.get("recommend"));
+            kongfzAddGoodMap.put("itemName",getGoodTitle(shopDetailVo,bookBaseInfoVo));
+            kongfzAddGoodMap.put("importantDesc",shopDetailVo.get("recommend"));
             /**
              * 价格
              */
-            map.put("price",getPrice(shopDetailVo,bookBaseInfoVo,priceTemplateVo));
+            kongfzAddGoodMap.put("price",getPrice(shopDetailVo,bookBaseInfoVo,priceTemplateVo));
             /**
              * 库存
              */
-            map.put("number",bookBaseInfoVo.get("stock"));
+            kongfzAddGoodMap.put("number",bookBaseInfoVo.get("stock"));
             /**
              * 品相
              */
             if(bookBaseInfoVo.get("conditionCode") != null){
-                map.put("quality",bookBaseInfoVo.get("conditionCode"));
+                kongfzAddGoodMap.put("quality",bookBaseInfoVo.get("conditionCode"));
             }else{
-                map.put("quality",shopDetailVo.get("conditionDef"));
+                kongfzAddGoodMap.put("quality",shopDetailVo.get("conditionDef"));
             }
-            map.put("qualityDesc",shopDetailVo.get("conditionDes"));
+            kongfzAddGoodMap.put("qualityDesc",shopDetailVo.get("conditionDes"));
             /**
              * 货号
              */
-            map.put("itemSn",bookBaseInfoVo.get("artNo"));
+            kongfzAddGoodMap.put("itemSn",bookBaseInfoVo.get("artNo"));
             /**
              * 图片
              */
             //获取实拍图
-            String[] useImages = bookBaseInfoVo.get("useImages") != null ? bookBaseInfoVo.get("useImages").toString().split(";") : new String[0];
+            String[] useImages = bookBaseInfoVo.get("useImages") != null && StringUtils.isNotEmpty(bookBaseInfoVo.get("useImages").toString()) ? bookBaseInfoVo.get("useImages").toString().split(";") : new String[0];
+            System.out.println("用户实拍图数量------:"+useImages.length + ":"+useImages);
             //无水印图片记录
             String noSyImage = "";
             String images = "";
@@ -600,7 +606,7 @@ public class GoodsServiceImpl implements GoodsService {
                     }
                 }
                 System.out.println("中央书库上传首图-------------"+image+"；书名:"+bookBaseInfoVo.get("bookName"));
-                map.put("imgUrl", image);
+                kongfzAddGoodMap.put("imgUrl", image);
                 //实拍图
                 images = image;
             }else{
@@ -611,7 +617,7 @@ public class GoodsServiceImpl implements GoodsService {
                     imageFirst = getImageSy(specSyImageUrl,imageFirst,bookBaseInfoVo.get("bookName").toString());
                 }
                 System.out.println("用户上传首图-------------"+imageFirst+"；书名:"+bookBaseInfoVo.get("bookName").toString());
-                map.put("imgUrl", imageFirst);
+                kongfzAddGoodMap.put("imgUrl", imageFirst);
                 // WatermarkPosition 水印位置 0 全部  1第一张
                 if(shopDetailVo.get("watermarkPosition").equals("0")){
                     //为0是全部增加水印
@@ -653,29 +659,33 @@ public class GoodsServiceImpl implements GoodsService {
                 images = images.substring(index);
             }
 
-            map.put("images",images);
+            kongfzAddGoodMap.put("images",images);
 
-            map.put("itemDesc",bookBaseInfoVo.get("content"));
+            kongfzAddGoodMap.put("itemDesc",bookBaseInfoVo.get("content"));
             if(shopDetailVo.get("isParcel").equals("0")){
                 //不包邮
-                map.put("bearShipping","buyer");
+                kongfzAddGoodMap.put("bearShipping","buyer");
             }else{
                 //包邮
-                map.put("bearShipping","seller");
+                kongfzAddGoodMap.put("bearShipping","seller");
             }
 
-            map.put("mouldld", shopDetailVo.get("templateId"));
-            map.put("weight",shopDetailVo.get("bookWeight"));
-            map.put("weightPiece",shopDetailVo.get("standardNumber"));
+            kongfzAddGoodMap.put("mouldld", shopDetailVo.get("templateId"));
+            kongfzAddGoodMap.put("weight",shopDetailVo.get("bookWeight"));
+            kongfzAddGoodMap.put("weightPiece",shopDetailVo.get("standardNumber"));
 
-            map.put("isbn",bookBaseInfoVo.get("isbn"));
-            map.put("author",bookBaseInfoVo.get("author"));
-            map.put("press",bookBaseInfoVo.get("publisher"));
-            map.put("pubDate",bookBaseInfoVo.get("publicationTime"));
-            map.put("binding",bookBaseInfoVo.get("bindingLayout"));
-            map.put("oriPrice",bookBaseInfoVo.get("fixPrice"));
+            kongfzAddGoodMap.put("isbn",bookBaseInfoVo.get("isbn"));
+            kongfzAddGoodMap.put("author",bookBaseInfoVo.get("author"));
+            kongfzAddGoodMap.put("press",bookBaseInfoVo.get("publisher"));
+            kongfzAddGoodMap.put("pubDate",bookBaseInfoVo.get("publicationTime"));
+            kongfzAddGoodMap.put("binding",bookBaseInfoVo.get("bindingLayout"));
+            kongfzAddGoodMap.put("oriPrice",bookBaseInfoVo.get("fixPrice"));
+            kongfzAddGoodMap.put("userId",userId);
+            String msg = goodsAddOne(kongfzAddGoodMap);
 
-            goodsAddOne(map);
+            if(StringUtils.isNotEmpty(msg)){
+                wirteExcel(taskId,shopVo,bookBaseInfoVoList,dataList,logsMap,filePath,msg);
+            }
         }
     }
 
@@ -839,7 +849,8 @@ public class GoodsServiceImpl implements GoodsService {
     public String getImageSy(String specSyImageUrl,String iamge,String goodsName){
 
         try {
-            return ImageUtils.mergeImages(iamge,specSyImageUrl);
+            String uuid = UUID.randomUUID().toString();
+            return ImageUtils.mergeImages(iamge,specSyImageUrl,uuid+".png");
         } catch (IOException e) {
             e.printStackTrace();
             return getWhiteImage(goodsName);

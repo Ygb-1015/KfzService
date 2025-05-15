@@ -10,7 +10,16 @@ public final class UrlUtil {
 //    }
 
     public static String getUrl(){
-        return "./file/";
+        return "/www/wwwroot/baseApi/file/";
+    }
+
+    /**
+     * 获取孔夫子静态图片文件存放的域名
+     * 主要用于生成的 水印图和白图文件存放
+     * @return
+     */
+    public static String getImageUrl(){
+        return "https://test.temp.img.buzhiyushu.cn/";
     }
 
     public static String getPath(){

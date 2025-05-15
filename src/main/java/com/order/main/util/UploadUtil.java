@@ -16,8 +16,9 @@ public final class UploadUtil {
      * @return
      */
     public static String getFiles(String imgVesselUrl, String bookName) {
-        if (!imgVesselUrl.equals("")) {
-            imgVesselUrl = "http://111.229.25.150:9000/zhishu1";
+        if (imgVesselUrl.equals("")) {
+            imgVesselUrl = "https://img.buzhiyushu.cn/zhishu1";
+//            imgVesselUrl = "http://111.229.25.150:9000/zhishu1";
             //书名进行md5加密
             String bookNameMd5 = encryptByMd5(bookName);
             //获取加密后打首字母大写

@@ -40,7 +40,7 @@ public interface GoodsService {
      * 商品发布接口
      * @param map
      */
-    void goodsAddOne(Map map);
+    String goodsAddOne(Map map);
 
     /**
      * 发布商品接口

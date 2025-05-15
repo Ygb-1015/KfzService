@@ -97,10 +97,12 @@ public class GoodsController {
     @GetMapping("/getBookInfoF/{isbn}")
     public String getBookInfoF(@PathVariable("isbn") String isbn){
         try{
+            System.out.println("调用php接口，根据isbn查询孔夫子书籍数据："+isbn);
             String mark = goodsService.getBookInfoF(isbn);
             mark = StringUtils.convertUnicodeToChinese(mark);
             return mark;
         }catch (Exception e){
+            e.printStackTrace();
             return "";
         }
     }

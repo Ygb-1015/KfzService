@@ -12,9 +12,8 @@ import java.nio.file.Path;
 
 public class ImageUtils {
 
-    private static final String CACHE_DIR = System.getProperty("java.io.tmpdir"); // 获取系统缓存目录
-    private static final String IMAGE_PATH = CACHE_DIR + File.separator; // 图片完整路径
-
+    private static final String IMAGE_PATH = "/www/wwwroot/temp/img/"; // 图片完整路径
+//    private static final String IMAGE_PATH = "D:/zhishu/";
     /**
      * 生成图片并保存到缓存文件夹
      *
@@ -50,15 +49,28 @@ public class ImageUtils {
         // 释放资源
         g2d.dispose();
 
-        // 保存图片到缓存文件夹
+        // 保存图片到指定目录下
         try {
             File outputFile = new File(IMAGE_PATH+fileName);
             ImageIO.write(image, "jpg", outputFile);
-            return IMAGE_PATH+fileName;
+            return UrlUtil.getImageUrl()+fileName;
         } catch (Exception e) {
             e.printStackTrace();
         }
         return "";
+    }
+
+    public static void deleteImage(String absolutePath) {
+        File file = new File(absolutePath);
+        if (file.exists()) {
+            if (file.delete()) {
+                System.out.println("文件删除成功: " + absolutePath);
+            } else {
+                System.out.println("文件删除失败: " + absolutePath);
+            }
+        } else {
+            System.out.println("文件不存在: " + absolutePath);
+        }
     }
 
 
@@ -79,8 +91,9 @@ public class ImageUtils {
      *
      * @param mainImageUrl    主图的 URL
      * @param watermarkImageUrl 水印图片的 URL
+     * @param fileName  文件名称
      */
-    public static String mergeImages(String mainImageUrl, String watermarkImageUrl) throws IOException {
+    public static String mergeImages(String mainImageUrl, String watermarkImageUrl,String fileName) throws IOException {
         // 从 URL 读取主图
         BufferedImage mainImage = ImageIO.read(new URL(mainImageUrl));
         // 从 URL 读取水印图片
@@ -108,15 +121,11 @@ public class ImageUtils {
         // 释放资源
         g2d.dispose();
 
-
-        // 创建临时文件
-        Path tempFile = Files.createTempFile("combined-image-", ".png");
-
-        // 保存合成后的图片到临时文件
-        ImageIO.write(combined, "PNG", tempFile.toFile());
+        File outputFile = new File(IMAGE_PATH+fileName);
+        ImageIO.write(combined, "PNG", outputFile);
 
         // 返回临时文件的路径
-        return tempFile.toAbsolutePath().toString();
+        return UrlUtil.getImageUrl()+fileName;
     }
 
 }
