@@ -248,6 +248,7 @@ public class OrderServiceImpl implements OrderService {
                 TShopOrderVo tShopOrderVo = new TShopOrderVo();
                 BeanUtils.copyProperties(order, tShopOrderVo);
                 PageQueryOrdersResponse.Order.ReceiverInfo receiverInfo = order.getReceiverInfo();
+                tShopOrderVo.setOrderSourceType(OrderSourceTypeEnum.KFZ.getCode());
                 // 店铺Id
                 tShopOrderVo.setShopId(shop.getId().toString());
                 // 店铺名称
@@ -276,7 +277,7 @@ public class OrderServiceImpl implements OrderService {
                 // 售后状态
                 if (KfzOrderStatusEnum.REFUND.getCode().equals(order.getOrderStatus())) {
                     tShopOrderVo.setAfterSalesStatus(AfterSalesStatusEnum.REFUND_WAIT_FOR_SELLER.getCode());
-                } else if (KfzOrderStatusEnum.REFUND_DEALD.getCode().equals(order.getOrderStatus())) {
+                } else if (KfzOrderStatusEnum.REFUND_DEALD.getCode().equals(order.getOrderStatus())||KfzOrderStatusEnum.PAID_REFUNDED.getCode().equals(order.getOrderStatus())) {
                     tShopOrderVo.setAfterSalesStatus(AfterSalesStatusEnum.REFUND_SUCCESS.getCode());
                 } else {
                     tShopOrderVo.setAfterSalesStatus(AfterSalesStatusEnum.NONE.getCode());
@@ -289,7 +290,7 @@ public class OrderServiceImpl implements OrderService {
                 } else if (KfzOrderStatusEnum.BUYER_CANCELLED.getCode().equals(order.getOrderStatus()) || KfzOrderStatusEnum.SELLER_CANCELLED_BEFORE_CONFIRM.getCode().equals(order.getOrderStatus()) || KfzOrderStatusEnum.ADMIN_CLOSED_BEFORE_CONFIRM.getCode().equals(order.getOrderStatus())) {
                     tShopOrderVo.setConfirmStatus(ConfirmStatusEnum.CANCEL.getCode());
                 } else {
-                    tShopOrderVo.setAfterSalesStatus(ConfirmStatusEnum.NOT_SOLD.getCode());
+                    tShopOrderVo.setConfirmStatus(ConfirmStatusEnum.NOT_SOLD.getCode());
                 }
                 // 成交时间
                 tShopOrderVo.setConfirmTime(order.getPayTime());
@@ -342,6 +343,7 @@ public class OrderServiceImpl implements OrderService {
                 exceptionItemList.add(goodsSourceUnknownExceptionItem);
                 // 尝试去旧订单中获取订单id，看是否能获取到
                 Long orderId = oldOrderMap.get(order.getOrderId().toString());
+                if (ObjectUtil.isNotNull(orderId)) tShopOrderVo.setId(orderId);
                 // 查询订单是否已存在
                 // 封装操作库存失败商品信息
                 // 用于存放订单下未知来源异常商品
@@ -350,7 +352,6 @@ public class OrderServiceImpl implements OrderService {
                 // TODO 暂时只做新订单扣减库存操作
                 // 查询旧订单看是否已存在
                 if (ObjectUtil.isNull(orderId)) {
-                    tShopOrderVo.setId(orderId);
                     for (PageQueryOrdersResponse.Order.Item item : items) {
                         try { // 默认拼多多店铺-1
                             operatingInventoryVo.setShopType(2);

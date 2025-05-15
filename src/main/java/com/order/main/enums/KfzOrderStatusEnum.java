@@ -28,6 +28,8 @@ public enum KfzOrderStatusEnum {
 
     REFUND_DEALD("RefundDeald", "已退货退款"),
 
+    PAID_REFUNDED("PaidRefunded", "退款完成"),
+
     BUYER_CANCELLED("BuyerCancelled", "买家取消"),
 
     SELLER_CANCELLED_BEFORE_CONFIRM("SellerCancelledBeforeConfirm", "卖家取消"),
