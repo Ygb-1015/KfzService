@@ -122,4 +122,22 @@ public class GoodsController {
         System.out.println(thread.getId());
         return String.valueOf(thread.getId());
     }
+
+    /**
+     * 暂停线程
+     * @param threadId
+     */
+    @GetMapping("/zanTing/{threadId}")
+    public void zanTing(@PathVariable String threadId) {
+        goodsService.zanTing(threadId);
+    }
+
+    /**
+     * 唤醒
+     * @param threadId
+     */
+    @GetMapping("/huanXing/{threadId}")
+    public void huanXing(@PathVariable String threadId) {
+        goodsService.huanXing(threadId);
+    }
 }
