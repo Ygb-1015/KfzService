@@ -324,6 +324,14 @@ public class GoodsServiceImpl implements GoodsService {
             System.out.println("---------------------上传成功");
             Map successResponse = (Map) dataMap.get("successResponse");
             Map item = (Map) successResponse.get("item");
+            //上传成功删除本地缓存图片
+            System.out.println("删除生成的图片---------------↓");
+            ImageUtils.deleteImage(request.getImgUrl());
+            String[] imagesDel = map.get("images").toString().split(";");
+            for(String iamge : imagesDel){
+                ImageUtils.deleteImage(iamge);
+            }
+            System.out.println("删除生成的图片---------------↑");
 
             Map callBackMap = new HashMap();
             callBackMap.put("shopId", map.get("shopId").toString());
@@ -582,7 +590,7 @@ public class GoodsServiceImpl implements GoodsService {
              * 图片
              */
             //获取实拍图
-            String[] useImages = bookBaseInfoVo.get("useImages") != null && StringUtils.isNotEmpty(bookBaseInfoVo.get("useImages").toString()) ? bookBaseInfoVo.get("useImages").toString().split(";") : new String[0];
+            String[] useImages = bookBaseInfoVo.get("useImages") != null && StringUtils.isNotEmpty(bookBaseInfoVo.get("useImages").toString()) ? bookBaseInfoVo.get("useImages").toString().split(",") : new String[0];
             System.out.println("用户实拍图数量------:"+useImages.length + ":"+useImages);
             //无水印图片记录
             String noSyImage = "";

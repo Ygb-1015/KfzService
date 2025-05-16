@@ -61,6 +61,12 @@ public class ImageUtils {
     }
 
     public static void deleteImage(String absolutePath) {
+        if(absolutePath.contains(UrlUtil.getImageUrl())){
+            String[] markStr = absolutePath.split("/");
+            String fileName = markStr[markStr.length-1];
+            absolutePath = UrlUtil.getImageUrlStatic()+fileName;
+            System.out.println("需要删除的文件:"+absolutePath);
+        }
         File file = new File(absolutePath);
         if (file.exists()) {
             if (file.delete()) {

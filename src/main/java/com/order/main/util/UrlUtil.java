@@ -22,6 +22,10 @@ public final class UrlUtil {
         return "https://test.temp.img.buzhiyushu.cn/";
     }
 
+    public static String getImageUrlStatic(){
+        return "/www/wwwroot/temp/img/";
+    }
+
     public static String getPath(){
         return ClientConstantUtils.ERP_URL;
     }
