@@ -930,11 +930,14 @@ public class GoodsServiceImpl implements GoodsService {
         EasyExcelUtil.continuousWriting(filePath,dataList);
 
         if(autoMark.equals("autoGoodsAdd") && !msg.equals("上传成功")){
+            System.out.println("新增通知-----");
             //若是自动上传的商品，则必定是一个,若是上传失败则调用接口，记录通知
             Map map = new HashMap();
             map.put("msg",msg);
             map.put("userId",userId);
-            InterfaceUtils.getInterfacePost(UrlUtil.getPath()+"/zhishu/notice/addNotice",map);
+            map.put("isbn",dataList.get(0));
+            map.put("bookName",dataList.get(1));
+            InterfaceUtils.getInterfacePost("/zhishu/notice/addNotice",map);
         }
     }
 
