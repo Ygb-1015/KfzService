@@ -439,6 +439,8 @@ public class GoodsServiceImpl implements GoodsService {
                          String whiteStr,
                          String blackStr,
                          String userId) {
+        //标记是否是自动上传的商品
+        String autoMark = map.get("mark") != null && StringUtils.isNotEmpty(map.get("mark").toString()) ? map.get("mark").toString() : "";
         //店铺详细设置数据
         Map shopDetailVo = (Map) map.get(shopVo.get("id")+"shopDetailVo");
         //销售模板数据
@@ -474,12 +476,16 @@ public class GoodsServiceImpl implements GoodsService {
             dataList.add(bookBaseInfoVo.get("bookName") == null ? "" : bookBaseInfoVo.get("bookName").toString());
             dataList.add(new BigDecimal(bookBaseInfoVo.get("price").toString()).divide(new BigDecimal(100)).toString());
             dataList.add(String.valueOf(bookBaseInfoVo.get("stock")));
+            if(bookBaseInfoVo.get("id") == null || bookBaseInfoVo.get("id").equals("")){
+                wirteExcel(taskId,shopVo,bookBaseInfoVoList,dataList,logsMap,filePath,"未在孔网查询到图书条目",autoMark,userId);
+                continue;
+            }
             if(bookBaseInfoVo.get("msg") != null && bookBaseInfoVo.get("msg").equals("无数据")){
-                wirteExcel(taskId,shopVo,bookBaseInfoVoList,dataList,logsMap,filePath,"未获取到商品信息");
+                wirteExcel(taskId,shopVo,bookBaseInfoVoList,dataList,logsMap,filePath,"未获取到商品信息",autoMark,userId);
                 continue;
             }
             if(bookBaseInfoVo.get("bookName") == null){
-                wirteExcel(taskId,shopVo,bookBaseInfoVoList,dataList,logsMap,filePath,"未获取到书名信息");
+                wirteExcel(taskId,shopVo,bookBaseInfoVoList,dataList,logsMap,filePath,"未获取到书名信息",autoMark,userId);
                 continue;
             }
 
@@ -495,7 +501,7 @@ public class GoodsServiceImpl implements GoodsService {
             //校验书名
             systemBlack = systemBlack ? systemBlack : checkString(bookBaseInfoVo.get("bookName").toString(),  BookFilterUtil.BOOKNAMEFILTERSTR);
             if(systemBlack){
-                wirteExcel(taskId,shopVo,bookBaseInfoVoList,dataList,logsMap,filePath,"该商品存在黑名单中");
+                wirteExcel(taskId,shopVo,bookBaseInfoVoList,dataList,logsMap,filePath,"该商品存在黑名单中",autoMark,userId);
                 continue;
             }
             //校验白名单和黑名单
@@ -536,7 +542,7 @@ public class GoodsServiceImpl implements GoodsService {
                 }
                 if(blackBool){
                     //黑名单校验成功，跳出循环
-                    wirteExcel(taskId,shopVo,bookBaseInfoVoList,dataList,logsMap,filePath,"该商品存在黑名单中");
+                    wirteExcel(taskId,shopVo,bookBaseInfoVoList,dataList,logsMap,filePath,"该商品存在黑名单中",autoMark,userId);
                     continue;
                 }
             }
@@ -547,7 +553,7 @@ public class GoodsServiceImpl implements GoodsService {
                     Boolean exists = goodsFilterStr.contains(bookBaseInfoVo.get("goodsId").toString());
                     if(exists){
                         //写入日志
-                        wirteExcel(taskId,shopVo,bookBaseInfoVoList,dataList,logsMap,filePath,"商品已发布,无法继续发布");
+                        wirteExcel(taskId,shopVo,bookBaseInfoVoList,dataList,logsMap,filePath,"商品已发布,无法继续发布",autoMark,userId);
                         continue;
                     }
                 }
@@ -560,6 +566,7 @@ public class GoodsServiceImpl implements GoodsService {
             kongfzAddGoodMap.put("tpl",shopDetailVo.get("bookTemplate"));
             kongfzAddGoodMap.put("catId","");
             kongfzAddGoodMap.put("myCatId","");
+            kongfzAddGoodMap.put("otherName",bookBaseInfoVo.get("bookName"));
             /**
              * 商品标题
              */
@@ -692,7 +699,7 @@ public class GoodsServiceImpl implements GoodsService {
             String msg = goodsAddOne(kongfzAddGoodMap);
 
             if(StringUtils.isNotEmpty(msg)){
-                wirteExcel(taskId,shopVo,bookBaseInfoVoList,dataList,logsMap,filePath,msg);
+                wirteExcel(taskId,shopVo,bookBaseInfoVoList,dataList,logsMap,filePath,msg,autoMark,userId);
             }
         }
     }
@@ -901,7 +908,9 @@ public class GoodsServiceImpl implements GoodsService {
                            List<String> dataList,
                            Map<String,String> logsMap,
                            String filePath,
-                           String msg){
+                           String msg,
+                           String autoMark,
+                           String userId){
         //记录任务店铺进度
         readTaskShopTxt(taskId,String.valueOf(shopVo.get("id")),String.valueOf(shopVo.get("shopName")),String.valueOf(bookBaseInfoVoList.size()));
         //总文件信息录入
@@ -919,6 +928,14 @@ public class GoodsServiceImpl implements GoodsService {
         //记录任务店铺日志详细进度
         readTaskShopLogsTxt(taskId,String.valueOf(shopVo.get("id")),String.valueOf(shopVo.get("shopName")),msg,logsMap.get(msg),String.valueOf(bookBaseInfoVoList.size()));
         EasyExcelUtil.continuousWriting(filePath,dataList);
+
+        if(autoMark.equals("autoGoodsAdd") && !msg.equals("上传成功")){
+            //若是自动上传的商品，则必定是一个,若是上传失败则调用接口，记录通知
+            Map map = new HashMap();
+            map.put("msg",msg);
+            map.put("userId",userId);
+            InterfaceUtils.getInterfacePost(UrlUtil.getPath()+"/zhishu/notice/addNotice",map);
+        }
     }
 
     /**
