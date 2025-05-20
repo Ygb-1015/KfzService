@@ -1,10 +1,12 @@
 package com.order.main.controller;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.order.main.dto.requst.OrderDeliveryRequest;
 import com.order.main.dto.response.LogisticsMethodResponse;
 import com.order.main.exception.ServiceException;
 import com.order.main.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.constraints.NotNull;
@@ -38,19 +40,15 @@ public class OrderController {
      * 订单发货
      */
     @GetMapping("/deliver")
-    public Boolean orderDelivery(
-            @NotNull(message = "shopId不能为空") Long shopId, @NotNull(message = "orderId不能为空") Long orderId,
-            @NotNull(message = "shippingId不能为空") String shippingId, String shippingCom, String shipmentNum,
-            String userDefined, String moreShipmentNum
-    ) {
-        if (!shippingId.equals("noLogistics")){
-            if (ObjectUtil.isEmpty(shippingCom)) throw new ServiceException("快递公司(shippingCom)不能为空");
-            if (ObjectUtil.isEmpty(shipmentNum)) throw new ServiceException("快递单号(shipmentNum)不能为空");
+    public Boolean orderDelivery(@Validated @RequestBody OrderDeliveryRequest request) {
+        if (!request.getShippingId().equals("noLogistics")) {
+            if (ObjectUtil.isEmpty(request.getShippingCom())) throw new ServiceException("快递公司(shippingCom)不能为空");
+            if (ObjectUtil.isEmpty(request.getShipmentNum())) throw new ServiceException("快递单号(shipmentNum)不能为空");
         }
-        if ("other".equals(shippingCom)){
-            if (ObjectUtil.isEmpty(userDefined)) throw new ServiceException("用户自定义物流公司(userDefined)不能为空");
+        if ("other".equals(request.getShippingCom())) {
+            if (ObjectUtil.isEmpty(request.getUserDefined())) throw new ServiceException("用户自定义物流公司(userDefined)不能为空");
         }
-        return orderService.orderDelivery(shopId, orderId, shippingId, shippingCom, shipmentNum, userDefined, moreShipmentNum);
+        return orderService.orderDelivery(request.getShopId(), request.getOrderId(), request.getShippingId(), request.getShippingCom(), request.getShipmentNum(), request.getUserDefined(), request.getMoreShipmentNum());
     }
 
 }
