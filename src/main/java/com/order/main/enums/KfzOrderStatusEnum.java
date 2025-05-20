@@ -20,7 +20,7 @@ public enum KfzOrderStatusEnum {
 
     SHIPPED_TO_RECEIPT("ShippedToReceipt", "待确认收货"),
 
-    REFUND("Refund", "退货退款中"),
+    SHIPPED_REFUNDING("Shipped-Refunding", "退货退款中"),
 
     SELLER_REVIEWED("sellerReviewed", "待评价"),
 
@@ -28,7 +28,7 @@ public enum KfzOrderStatusEnum {
 
     REFUND_DEALD("RefundDeald", "已退货退款"),
 
-    PAID_REFUNDED("PaidRefunded", "退款完成"),
+    SHIPPED_REFUNDED("ShippedRefunded", "退款完成"),
 
     BUYER_CANCELLED("BuyerCancelled", "买家取消"),
 

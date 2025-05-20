@@ -275,9 +275,9 @@ public class OrderServiceImpl implements OrderService {
 
                 }
                 // 售后状态
-                if (KfzOrderStatusEnum.REFUND.getCode().equals(order.getOrderStatus())) {
+                if (KfzOrderStatusEnum.SHIPPED_REFUNDING.getCode().equals(order.getOrderStatus())) {
                     tShopOrderVo.setAfterSalesStatus(AfterSalesStatusEnum.REFUND_WAIT_FOR_SELLER.getCode());
-                } else if (KfzOrderStatusEnum.REFUND_DEALD.getCode().equals(order.getOrderStatus())||KfzOrderStatusEnum.PAID_REFUNDED.getCode().equals(order.getOrderStatus())) {
+                } else if (KfzOrderStatusEnum.REFUND_DEALD.getCode().equals(order.getOrderStatus())||KfzOrderStatusEnum.SHIPPED_REFUNDED.getCode().equals(order.getOrderStatus())) {
                     tShopOrderVo.setAfterSalesStatus(AfterSalesStatusEnum.REFUND_SUCCESS.getCode());
                 } else {
                     tShopOrderVo.setAfterSalesStatus(AfterSalesStatusEnum.NONE.getCode());
