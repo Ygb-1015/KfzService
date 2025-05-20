@@ -39,7 +39,7 @@ public class OrderController {
     /**
      * 订单发货
      */
-    @GetMapping("/deliver")
+    @PostMapping("/deliver")
     public Boolean orderDelivery(@Validated @RequestBody OrderDeliveryRequest request) {
         if (!request.getShippingId().equals("noLogistics")) {
             if (ObjectUtil.isEmpty(request.getShippingCom())) throw new ServiceException("快递公司(shippingCom)不能为空");
