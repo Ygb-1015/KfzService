@@ -1,11 +1,9 @@
 package com.order.main.controller;
 
+import com.order.main.dto.response.LogisticsMethodResponse;
 import com.order.main.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -23,6 +21,14 @@ public class OrderController {
     public String fullSynchronizationOrder(@RequestBody List<Long> shopIdList) {
         orderService.fullSynchronizationOrder(shopIdList);
         return "susses";
+    }
+
+    /**
+     * 获取配送方式列表
+     */
+    @GetMapping("/delivery/methodList")
+    public List<LogisticsMethodResponse> deliveryMethodList(Long shopId) {
+        return orderService.deliveryMethodList(shopId);
     }
 
 }
