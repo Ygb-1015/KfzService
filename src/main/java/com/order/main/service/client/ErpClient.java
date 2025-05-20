@@ -86,6 +86,6 @@ public interface ErpClient {
      * @param operatingInventoryVo
      * @return
      */
-    @Post(value = "{myURL}/zhishu/shopGoods/operatingInventory", dataType = "json")
+    @Post(value = "{myURL}/zhishu/shopGoods/operatingInventory", dataType = "json", headers = {"Content-Type: application/json"})
     Boolean OperatingInventory(@Var("myURL") String myURL, @Body OperatingInventoryVo operatingInventoryVo);
 }
