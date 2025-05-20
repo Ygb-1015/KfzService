@@ -35,5 +35,4 @@ public class OrderDeliveryRequest {
     // 多个运单号
     private String moreShipmentNum;
 
-
 }
