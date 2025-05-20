@@ -12,18 +12,51 @@ import java.util.List;
 @Service
 public interface PhpClient {
 
+    /**
+     * 获取店铺信息
+     *
+     * @param myURL
+     * @param token
+     * @return
+     */
     @Post(value = "{myURL}/shop/simpleGet", dataType = "json")
     KfzBaseResponse<GetShopInfoResponse> getShopInfo(@Var("myURL") String myURL, @Query("token") String token);
 
+    /**
+     * 获取商品列表
+     *
+     * @param myURL
+     * @param request
+     * @return
+     */
     @Post(value = "{myURL}/shop/itemList", dataType = "json")
     KfzBaseResponse<GetShopGoodsListResponse> getShopGoodsList(@Var("myURL") String myURL, @Body GetShopGoodsListRequest request);
 
+    /**
+     * 修改商品库存
+     *
+     * @param myURL
+     * @param request
+     * @return
+     */
     @Post(value = "{myURL}/shop/itemItemsnUpdate", dataType = "json", contentType = "application/json")
     KfzBaseResponse<ItemItemsnUpdateResponse> itemItemsnUpdate(@Var("myURL") String myURL, @Body ItemItemsnUpdateRequest request);
 
+    /**
+     * 订单列表
+     *
+     * @param myURL
+     * @param token
+     * @param userType
+     * @param pageNum
+     * @param pageSize
+     * @param startUpdateTime
+     * @return
+     */
     @Get(value = "{myURL}/order/getList", dataType = "json")
-    KfzBaseResponse<PageQueryOrdersResponse> pageQueryOrders(@Var("myURL") String myURL,
-                                                             @Query("token") String token, @Query("userType") String userType, @Query("pageNum") Integer pageNum, @Query("pageSize") Integer pageSize, @Query("startUpdateTime") String startUpdateTime);
+    KfzBaseResponse<PageQueryOrdersResponse> pageQueryOrders(@Var("myURL") String myURL, @Query("token") String token,
+                                                             @Query("userType") String userType, @Query("pageNum") Integer pageNum,
+                                                             @Query("pageSize") Integer pageSize, @Query("startUpdateTime") String startUpdateTime);
 
     /**
      * 商品新增
@@ -53,7 +86,6 @@ public interface PhpClient {
     @Post(value = "{myURL}/image/upload", dataType = "json")
     String upload(@Var("myURL") String myURL, @Query("file") String file, @Query("token") String token);
 
-
     /**
      * * 修改商品库存
      *
@@ -72,9 +104,21 @@ public interface PhpClient {
     @Get(value = "{myURL}/bookBase/getBookInfoF", dataType = "json")
     String getBookInfoF(@Var("myURL") String myURL, @Query("isbn") String isbn);
 
-
+    /**
+     * 获取物流公司列表
+     *
+     * @param myURL
+     * @param token
+     * @return
+     */
     @Get(value = "{myURL}/delivery/methodList", dataType = "json")
     KfzBaseResponse<List<DeliveryMethodResponse>> deliveryMethodList(@Var("myURL") String myURL, @Query("token") String token);
+
+
+    @Post(value = "{myURL}/order/deliver", dataType = "json")
+    KfzBaseResponse<OrderDeliveryResponse> orderDelivery(@Var("myURL") String myURL, @Query("token") String token,
+                                                         @Query("orderId") Long orderId, @Query("shippingId") String shippingId, @Query("shippingCom") String shippingCom,
+                                                         @Query("shipmentNum") String shipmentNum, @Query("userDefined") String userDefined, @Query("moreShipmentNum") String moreShipmentNum);
 
 
 }

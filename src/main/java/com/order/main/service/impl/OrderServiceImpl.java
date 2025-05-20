@@ -6,6 +6,7 @@ import com.order.main.dto.bo.*;
 import com.order.main.dto.requst.OrderListByShopIdRequest;
 import com.order.main.dto.response.*;
 import com.order.main.enums.*;
+import com.order.main.exception.ServiceException;
 import com.order.main.service.OrderService;
 import com.order.main.service.client.ErpClient;
 import com.order.main.service.client.PhpClient;
@@ -94,7 +95,7 @@ public class OrderServiceImpl implements OrderService {
                         // 记录错误日志
                         log.error("店铺不存在，shopId: {}", shopId);
                         // 抛出异常
-                        throw new RuntimeException("店铺不存在");
+                        throw new ServiceException("店铺不存在");
                     }
                     try {
                         // 调用孔夫子增量订单接口
@@ -103,7 +104,7 @@ public class OrderServiceImpl implements OrderService {
                         // 记录错误日志
                         log.error("同步店铺订单失败，shopId: {}", shopId, e);
                         // 抛出异常
-                        throw new RuntimeException("同步订单失败: " + e.getMessage(), e);
+                        throw new ServiceException("同步订单失败: " + e.getMessage());
                     }
                 } catch (Exception e) {
                     // 捕获其他未知异常
@@ -191,7 +192,7 @@ public class OrderServiceImpl implements OrderService {
                     token = tokenUtils.refreshToken(refreshToken, shopId);
                     isRefreshToken = true;
                 } else {
-                    throw new RuntimeException("查询孔夫子店铺订单异常-" + JSONObject.toJSONString(ordersResponse));
+                    throw new ServiceException("查询孔夫子店铺订单异常-" + JSONObject.toJSONString(ordersResponse));
                 }
             } else {
                 if (ObjectUtil.isNotEmpty(ordersResponse.getSuccessResponse().getList())) {
@@ -422,7 +423,7 @@ public class OrderServiceImpl implements OrderService {
                     token = tokenUtils.refreshToken(refreshToken, shopId);
                     isRefreshToken = true;
                 } else {
-                    throw new RuntimeException("查询孔夫子获取配送方式列表异常-" + JSONObject.toJSONString(response));
+                    throw new ServiceException("查询孔夫子获取配送方式列表异常-" + JSONObject.toJSONString(response));
                 }
             } else {
                 flag = false;
@@ -442,6 +443,42 @@ public class OrderServiceImpl implements OrderService {
             }
         }
         return logisticsMethodResponses;
+    }
+
+    @Override
+    public Boolean orderDelivery(Long shopId, Long orderId, String shippingId, String shippingCom, String shipmentNum, String userDefined, String moreShipmentNum) {
+        // 根据shopId获取店铺信息
+        ShopVo shop = erpClient.getShopInfo(ClientConstantUtils.ERP_URL, shopId);
+        String token = shop.getToken();
+        String refreshToken = shop.getRefreshToken();
+
+        boolean flag = true; // 循环标志
+        boolean isRefreshToken = false; // 是否已刷新token
+
+        KfzBaseResponse<OrderDeliveryResponse> response = null;
+
+        while (flag) {
+            response = phpClient.orderDelivery(ClientConstantUtils.PHP_URL, token, orderId, shippingId, shippingCom, shipmentNum, userDefined, moreShipmentNum);
+            if (!isRefreshToken && ObjectUtil.isNotEmpty(response.getErrorResponse())) {
+                // 若ErrorResponse不为空判断是否需要刷新token
+                log.info("查询孔夫子获取配送方式列表响应失败-{}", JSONObject.toJSONString(response.getErrorResponse()));
+                List<Long> tokenErrorCode = new ArrayList<>();
+                tokenErrorCode.add(1000L);
+                tokenErrorCode.add(1001L);
+                tokenErrorCode.add(2000L);
+                tokenErrorCode.add(2001L);
+                if (tokenErrorCode.contains(response.getErrorResponse().getCode())) {
+                    // token原因请求失败则刷新token
+                    token = tokenUtils.refreshToken(refreshToken, shopId);
+                    isRefreshToken = true;
+                } else {
+                    throw new ServiceException("查询孔夫子获取配送方式列表异常-" + JSONObject.toJSONString(response));
+                }
+            } else {
+                flag = false;
+            }
+        }
+        return true;
     }
 
 }
