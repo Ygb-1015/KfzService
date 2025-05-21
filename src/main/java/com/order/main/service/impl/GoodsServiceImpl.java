@@ -319,7 +319,16 @@ public class GoodsServiceImpl implements GoodsService {
         if(errorResponse != null){
             System.out.println("---------------------上传报错");
             System.out.println(JsonUtil.transferToJson(errorResponse)+"------------");
-            return "上传失败："+errorResponse.get("subMsg");
+            String errorMsg = errorResponse.get("subMsg").toString();
+            if (errorResponse.get("data") != null){
+                Map data = (Map) errorResponse.get("data");
+                Collection<Integer> values = data.values();
+                for (Integer value : values) {
+                    System.out.println(value);
+                    errorMsg = errorMsg + ";" + value;
+                }
+            }
+            return "上传失败："+errorMsg;
         }else{
             System.out.println("---------------------上传成功");
             Map successResponse = (Map) dataMap.get("successResponse");
@@ -333,14 +342,18 @@ public class GoodsServiceImpl implements GoodsService {
             }
             System.out.println("删除生成的图片---------------↑");
 
-            Map callBackMap = new HashMap();
-            callBackMap.put("shopId", map.get("shopId").toString());
-            callBackMap.put("goodId", map.get("goodId").toString());
-            callBackMap.put("itemId", item.get("itemId"));
-            callBackMap.put("userId", map.get("userId").toString());
-            //调用接口
-            System.out.println("-----------------------调用新增发布商品接口");
-            InterfaceUtils.getInterfacePost("/api/kongfz/goodAddCallBack", callBackMap);
+            if(map.get("goodId") != null){
+                Map callBackMap = new HashMap();
+                callBackMap.put("shopId", map.get("shopId").toString());
+                callBackMap.put("goodId", map.get("goodId").toString());
+                callBackMap.put("itemId", item.get("itemId"));
+                callBackMap.put("userId", map.get("userId").toString());
+                //调用接口
+                System.out.println("-----------------------调用新增发布商品接口");
+                InterfaceUtils.getInterfacePost("/api/kongfz/goodAddCallBack", callBackMap);
+            }else {
+                System.out.println("excel发布孔夫子商品------");
+            }
 
             return "上传成功";
         }
@@ -576,7 +589,15 @@ public class GoodsServiceImpl implements GoodsService {
             /**
              * 价格
              */
-            kongfzAddGoodMap.put("price",getPrice(shopDetailVo,bookBaseInfoVo,priceTemplateVo,logisticsListMap));
+            String price = getPrice(shopDetailVo,bookBaseInfoVo,priceTemplateVo,logisticsListMap);
+            if(isBigDecimal(price)){
+                kongfzAddGoodMap.put("price",price);
+            }else{
+                //如果price不能转为 BigDecimal类型，则为报错信息
+                wirteExcel(taskId,shopVo,bookBaseInfoVoList,dataList,logsMap,filePath,price,autoMark,userId);
+                continue;
+            }
+
             /**
              * 库存
              */
@@ -804,11 +825,12 @@ public class GoodsServiceImpl implements GoodsService {
             String artNo = bookBaseInfoVo.get("artNo").toString().substring(0,2);
             //获取运费模板
             Map logisticsMap = (Map) logisticsListMap.get(artNo);
-            //获取最低首费
-            System.out.println("获取最低首费");
-            String firPrice = logisticsMap.get("firPrice").toString();
-            System.out.println("最低首费："+firPrice);
-            priceOld = new BigDecimal(String.valueOf(priceOld)).add(new BigDecimal(firPrice));
+            if(logisticsMap != null){
+                System.out.println("获取最低首费");
+                String firPrice = logisticsMap.get("firPrice").toString();
+                System.out.println("最低首费："+firPrice);
+                priceOld = new BigDecimal(String.valueOf(priceOld)).add(new BigDecimal(firPrice));
+            }
         }
 
         if(priceOld.compareTo(lowPrice) < 0){
@@ -832,6 +854,18 @@ public class GoodsServiceImpl implements GoodsService {
         return price.toString();
     }
 
+
+    public static boolean isBigDecimal(String str) {
+        if (str == null || str.trim().isEmpty()) {
+            return false;
+        }
+        try {
+            new BigDecimal(str.trim());
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
 
 
     /**
