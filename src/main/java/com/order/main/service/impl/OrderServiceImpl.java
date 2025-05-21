@@ -433,10 +433,18 @@ public class OrderServiceImpl implements OrderService {
         List<LogisticsMethodResponse> logisticsMethodResponses = new ArrayList<>();
         for (DeliveryMethodResponse deliveryMethodResponse : response.getSuccessResponse()) {
             if (ObjectUtil.isNotEmpty(deliveryMethodResponse.getCompanies())) {
-                for (DeliveryMethodResponse.company company : deliveryMethodResponse.getCompanies()) {
+                if (ObjectUtil.isNotEmpty(deliveryMethodResponse.getCompanies())) {
+                    for (DeliveryMethodResponse.company company : deliveryMethodResponse.getCompanies()) {
+                        LogisticsMethodResponse logisticsMethod = LogisticsMethodResponse.builder()
+                                .methodId(deliveryMethodResponse.getShippingId() + "_" + company.getShippingCom())
+                                .methodName(deliveryMethodResponse.getShippingName() + "——" + company.getShippingComName())
+                                .build();
+                        logisticsMethodResponses.add(logisticsMethod);
+                    }
+                } else {
                     LogisticsMethodResponse logisticsMethod = LogisticsMethodResponse.builder()
-                            .methodId(deliveryMethodResponse.getShippingId() + "_" + company.getShippingCom())
-                            .methodName(deliveryMethodResponse.getShippingName() + "——" + company.getShippingComName())
+                            .methodId(deliveryMethodResponse.getShippingId())
+                            .methodName(deliveryMethodResponse.getShippingName())
                             .build();
                     logisticsMethodResponses.add(logisticsMethod);
                 }
