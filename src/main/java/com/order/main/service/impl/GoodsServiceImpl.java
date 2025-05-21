@@ -319,7 +319,7 @@ public class GoodsServiceImpl implements GoodsService {
         if(errorResponse != null){
             System.out.println("---------------------上传报错");
             System.out.println(JsonUtil.transferToJson(errorResponse)+"------------");
-            return "上传失败："+errorResponse.get("msg");
+            return "上传失败："+errorResponse.get("subMsg");
         }else{
             System.out.println("---------------------上传成功");
             Map successResponse = (Map) dataMap.get("successResponse");
