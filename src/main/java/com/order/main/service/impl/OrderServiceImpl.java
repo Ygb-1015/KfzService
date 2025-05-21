@@ -2,12 +2,12 @@ package com.order.main.service.impl;
 
 import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSONObject;
+import com.order.main.dto.R;
 import com.order.main.dto.bo.*;
 import com.order.main.dto.requst.OrderListByShopIdRequest;
-import com.order.main.dto.response.KfzBaseResponse;
-import com.order.main.dto.response.PageQueryOrdersResponse;
-import com.order.main.dto.response.ShopVo;
+import com.order.main.dto.response.*;
 import com.order.main.enums.*;
+import com.order.main.exception.ServiceException;
 import com.order.main.service.OrderService;
 import com.order.main.service.client.ErpClient;
 import com.order.main.service.client.PhpClient;
@@ -65,65 +65,65 @@ public class OrderServiceImpl implements OrderService {
             return;
         }
         for (Long shopId : shopIdList) {
-                ThreadPoolUtils.execute(() -> {
+            ThreadPoolUtils.execute(() -> {
 
-                    // 加上redis锁防止重复调用
-                    String lockKey = LOCK_KEY_PREFIX  + shopId;
-                    String lockValue = "locked";
-                    // 尝试获取锁
-                    String syncOrderLock = (String) redisUtils.getCacheObject(lockKey);
-                    if (ObjectUtil.isNotNull(syncOrderLock)) return;
-                    // 若没有锁，存入新的锁，并设置过期时间
-                    redisUtils.setCacheObject(lockKey, lockValue, LOCK_EXPIRE_SECONDS, TimeUnit.SECONDS);
-                    ScheduledExecutorService scheduler = null;
-                    ScheduledFuture<?> future = null;
-                    try {
-                        scheduler = Executors.newScheduledThreadPool(1);
-                        // 设置一个定时任务来不断延长锁的过期时间
-                        Runnable renewLockTask = () -> {
-                            redisUtils.setCacheObject(lockKey, lockValue, LOCK_EXPIRE_SECONDS, TimeUnit.SECONDS);
-                            System.out.println("Redis锁过期时间已更新");
-                        };
-                        // 启动定时任务
-                        future = scheduler.scheduleAtFixedRate(renewLockTask, 0, INITIAL_DELAY_AND_PERIOD, TimeUnit.SECONDS);
+                // 加上redis锁防止重复调用
+                String lockKey = LOCK_KEY_PREFIX + shopId;
+                String lockValue = "locked";
+                // 尝试获取锁
+                String syncOrderLock = (String) redisUtils.getCacheObject(lockKey);
+                if (ObjectUtil.isNotNull(syncOrderLock)) return;
+                // 若没有锁，存入新的锁，并设置过期时间
+                redisUtils.setCacheObject(lockKey, lockValue, LOCK_EXPIRE_SECONDS, TimeUnit.SECONDS);
+                ScheduledExecutorService scheduler = null;
+                ScheduledFuture<?> future = null;
+                try {
+                    scheduler = Executors.newScheduledThreadPool(1);
+                    // 设置一个定时任务来不断延长锁的过期时间
+                    Runnable renewLockTask = () -> {
+                        redisUtils.setCacheObject(lockKey, lockValue, LOCK_EXPIRE_SECONDS, TimeUnit.SECONDS);
+                        System.out.println("Redis锁过期时间已更新");
+                    };
+                    // 启动定时任务
+                    future = scheduler.scheduleAtFixedRate(renewLockTask, 0, INITIAL_DELAY_AND_PERIOD, TimeUnit.SECONDS);
 
-                        System.out.println("线程ID-" + Thread.currentThread().getId() + ":同步店铺订单-shopId");
-                        // 根据shopId获取店铺信息
-                        ShopVo shop = erpClient.getShopInfo(ClientConstantUtils.ERP_URL, shopId);
+                    System.out.println("线程ID-" + Thread.currentThread().getId() + ":同步店铺订单-shopId");
+                    // 根据shopId获取店铺信息
+                    ShopVo shop = erpClient.getShopInfo(ClientConstantUtils.ERP_URL, shopId);
 
-                        // 如果店铺不存在，抛出异常
-                        if (shop == null) {
-                            // 记录错误日志
-                            log.error("店铺不存在，shopId: {}", shopId);
-                            // 抛出异常
-                            throw new RuntimeException("店铺不存在");
-                        }
-                        try {
-                            // 调用孔夫子增量订单接口
-                            synOrder(shop);
-                        } catch (Exception e) {
-                            // 记录错误日志
-                            log.error("同步店铺订单失败，shopId: {}", shopId, e);
-                            // 抛出异常
-                            throw new RuntimeException("同步订单失败: " + e.getMessage(), e);
-                        }
-                    } catch (Exception e) {
-                        // 捕获其他未知异常
-                        log.error("同步店铺订单失败，shopId: {}", shopId, e);
-                    } finally {
-                        // 取消定时任务
-                        if (future != null) {
-                            future.cancel(false);
-                        }
-                        // 关闭线程池
-                        if (scheduler != null) {
-                            scheduler.shutdownNow();
-                        }
-                        // 确保释放锁
-                        redisUtils.deleteCacheObject(lockKey);
-                        System.out.println("已释放redis锁");
+                    // 如果店铺不存在，抛出异常
+                    if (shop == null) {
+                        // 记录错误日志
+                        log.error("店铺不存在，shopId: {}", shopId);
+                        // 抛出异常
+                        throw new ServiceException("店铺不存在");
                     }
-                });
+                    try {
+                        // 调用孔夫子增量订单接口
+                        synOrder(shop);
+                    } catch (Exception e) {
+                        // 记录错误日志
+                        log.error("同步店铺订单失败，shopId: {}", shopId, e);
+                        // 抛出异常
+                        throw new ServiceException("同步订单失败: " + e.getMessage());
+                    }
+                } catch (Exception e) {
+                    // 捕获其他未知异常
+                    log.error("同步店铺订单失败，shopId: {}", shopId, e);
+                } finally {
+                    // 取消定时任务
+                    if (future != null) {
+                        future.cancel(false);
+                    }
+                    // 关闭线程池
+                    if (scheduler != null) {
+                        scheduler.shutdownNow();
+                    }
+                    // 确保释放锁
+                    redisUtils.deleteCacheObject(lockKey);
+                    System.out.println("已释放redis锁");
+                }
+            });
 
         }
     }
@@ -193,7 +193,7 @@ public class OrderServiceImpl implements OrderService {
                     token = tokenUtils.refreshToken(refreshToken, shopId);
                     isRefreshToken = true;
                 } else {
-                    throw new RuntimeException("查询孔夫子店铺订单异常-" + JSONObject.toJSONString(ordersResponse));
+                    throw new ServiceException("查询孔夫子店铺订单异常-" + JSONObject.toJSONString(ordersResponse));
                 }
             } else {
                 if (ObjectUtil.isNotEmpty(ordersResponse.getSuccessResponse().getList())) {
@@ -275,31 +275,36 @@ public class OrderServiceImpl implements OrderService {
 
                 }
                 // 售后状态
-                if (KfzOrderStatusEnum.REFUND.getCode().equals(order.getOrderStatus())) {
-                    tShopOrderVo.setAfterSalesStatus(AfterSalesStatusEnum.REFUND_WAIT_FOR_SELLER.getCode());
-                } else if (KfzOrderStatusEnum.REFUND_DEALD.getCode().equals(order.getOrderStatus())||KfzOrderStatusEnum.PAID_REFUNDED.getCode().equals(order.getOrderStatus())) {
+                if (KfzOrderStatusEnum.PAID_REFUNDING.getCode().equals(order.getOrderStatus())) {
+                    tShopOrderVo.setAfterSalesStatus(AfterSalesStatusEnum.BUYER_WAIT_FOR_REFUND.getCode());
+                } else if (KfzOrderStatusEnum.PAID_REFUND_REJECTED.getCode().equals(order.getOrderStatus()) || KfzOrderStatusEnum.SHIPPED_REFUND_REJECTED.getCode().equals(order.getOrderStatus())) {
+                    tShopOrderVo.setAfterSalesStatus(AfterSalesStatusEnum.REJECT_REFUND_WAIT_FOR_BUYER.getCode());
+                } else if (KfzOrderStatusEnum.PAID_REFUNDED.getCode().equals(order.getOrderStatus()) || KfzOrderStatusEnum.SHIPPED_REFUNDED.getCode().equals(order.getOrderStatus()) || KfzOrderStatusEnum.SHIPPED_RETURNED.getCode().equals(order.getOrderStatus())) {
                     tShopOrderVo.setAfterSalesStatus(AfterSalesStatusEnum.REFUND_SUCCESS.getCode());
+                } else if (KfzOrderStatusEnum.SHIPPED_REFUNDING.getCode().equals(order.getOrderStatus())) {
+                    tShopOrderVo.setAfterSalesStatus(AfterSalesStatusEnum.REFUND_WAIT_FOR_SELLER.getCode());
+                } else if (KfzOrderStatusEnum.SHIPPED_RETURNING.getCode().equals(order.getOrderStatus())) {
+                    tShopOrderVo.setAfterSalesStatus(AfterSalesStatusEnum.SHIPPED_RETURNING.getCode());
+                } else if (KfzOrderStatusEnum.SHIPPED_RETURN_REJECTED.getCode().equals(order.getOrderStatus())) {
+                    tShopOrderVo.setAfterSalesStatus(AfterSalesStatusEnum.SHIPPED_RETURN_REJECTED.getCode());
+                } else if (KfzOrderStatusEnum.RETURN_PENDING.getCode().equals(order.getOrderStatus())) {
+                    tShopOrderVo.setAfterSalesStatus(AfterSalesStatusEnum.RETURN_PENDING.getCode());
+                } else if (KfzOrderStatusEnum.RETURNED_TO_RECEIPT.getCode().equals(order.getOrderStatus())) {
+                    tShopOrderVo.setAfterSalesStatus(AfterSalesStatusEnum.RETURNED_TO_RECEIPT.getCode());
                 } else {
                     tShopOrderVo.setAfterSalesStatus(AfterSalesStatusEnum.NONE.getCode());
                 }
-                // 买家留言信息
-                tShopOrderVo.setBuyerMemo(order.getBuyerRemark());
+
                 // 成交状态
                 if (KfzOrderStatusEnum.SUCCESSFUL.getCode().equals(order.getOrderStatus())) {
                     tShopOrderVo.setConfirmStatus(ConfirmStatusEnum.SOLD.getCode());
-                } else if (KfzOrderStatusEnum.BUYER_CANCELLED.getCode().equals(order.getOrderStatus()) || KfzOrderStatusEnum.SELLER_CANCELLED_BEFORE_CONFIRM.getCode().equals(order.getOrderStatus()) || KfzOrderStatusEnum.ADMIN_CLOSED_BEFORE_CONFIRM.getCode().equals(order.getOrderStatus())) {
+                } else if (KfzOrderStatusEnum.BUYER_CANCELLED_BEFORE_CONFIRM.getCode().equals(order.getOrderStatus()) || KfzOrderStatusEnum.BUYER_CANCELLED_BEFORE_PAY.getCode().equals(order.getOrderStatus()) ||
+                        KfzOrderStatusEnum.SELLER_CANCELLED_BEFORE_CONFIRM.getCode().equals(order.getOrderStatus()) || KfzOrderStatusEnum.SELLER_CLOSED_BEFORE_PAY.getCode().equals(order.getOrderStatus()) ||
+                        KfzOrderStatusEnum.ADMIN_CLOSED_BEFORE_CONFIRM.getCode().equals(order.getOrderStatus()) || KfzOrderStatusEnum.SELLER_CANCELLED_AFTER_PAY.getCode().equals(order.getOrderStatus())) {
                     tShopOrderVo.setConfirmStatus(ConfirmStatusEnum.CANCEL.getCode());
                 } else {
                     tShopOrderVo.setConfirmStatus(ConfirmStatusEnum.NOT_SOLD.getCode());
                 }
-                // 成交时间
-                tShopOrderVo.setConfirmTime(order.getPayTime());
-                // 折扣金额，单位：元，折扣金额=平台优惠+商家优惠+团长免单优惠金额
-                tShopOrderVo.setDiscountAmount(new BigDecimal(order.getFavorableMoney()));
-                // 商品金额
-                tShopOrderVo.setGoodsAmount(new BigDecimal(order.getGoodsAmount()));
-                // 订单编号
-                tShopOrderVo.setOrderSn(order.getOrderId().toString());
                 // 订单状态
                 if (KfzOrderStatusEnum.PAID_TO_SHIP.getCode().equals(order.getOrderStatus())) {
                     tShopOrderVo.setOrderStatus(OrderStatusEnum.WAIT_FOR_SHIPMENT.getCode());
@@ -308,6 +313,16 @@ public class OrderServiceImpl implements OrderService {
                 } else if (KfzOrderStatusEnum.SUCCESSFUL.getCode().equals(order.getOrderStatus())) {
                     tShopOrderVo.setOrderStatus(OrderStatusEnum.SIGNED.getCode());
                 }
+                // 买家留言信息
+                tShopOrderVo.setBuyerMemo(order.getBuyerRemark());
+                // 成交时间
+                tShopOrderVo.setConfirmTime(order.getPayTime());
+                // 折扣金额，单位：元，折扣金额=平台优惠+商家优惠+团长免单优惠金额
+                tShopOrderVo.setDiscountAmount(new BigDecimal(order.getFavorableMoney()));
+                // 商品金额
+                tShopOrderVo.setGoodsAmount(new BigDecimal(order.getGoodsAmount()));
+                // 订单编号
+                tShopOrderVo.setOrderSn(order.getOrderId().toString());
                 // 支付金额
                 tShopOrderVo.setPayAmount(new BigDecimal(order.getOrderAmount()));
                 // 支付时间
@@ -395,4 +410,97 @@ public class OrderServiceImpl implements OrderService {
         // 更新最后同步时间
         erpClient.updateTime(ClientConstantUtils.ERP_URL, shop.getId(), now.toEpochMilli());
     }
+
+
+    @Override
+    public List<LogisticsMethodResponse> deliveryMethodList(Long shopId) {
+        // 根据shopId获取店铺信息
+        ShopVo shop = erpClient.getShopInfo(ClientConstantUtils.ERP_URL, shopId);
+        String token = shop.getToken();
+        String refreshToken = shop.getRefreshToken();
+
+        boolean flag = true; // 循环标志
+        boolean isRefreshToken = false; // 是否已刷新token
+
+        KfzBaseResponse<List<DeliveryMethodResponse>> response = null;
+
+        while (flag) {
+            response = phpClient.deliveryMethodList(ClientConstantUtils.PHP_URL, token);
+            if (!isRefreshToken && ObjectUtil.isNotEmpty(response.getErrorResponse())) {
+                // 若ErrorResponse不为空判断是否需要刷新token
+                log.info("查询孔夫子获取配送方式列表响应失败-{}", JSONObject.toJSONString(response.getErrorResponse()));
+                List<Long> tokenErrorCode = new ArrayList<>();
+                tokenErrorCode.add(1000L);
+                tokenErrorCode.add(1001L);
+                tokenErrorCode.add(2000L);
+                tokenErrorCode.add(2001L);
+                if (tokenErrorCode.contains(response.getErrorResponse().getCode())) {
+                    // token原因请求失败则刷新token
+                    token = tokenUtils.refreshToken(refreshToken, shopId);
+                    isRefreshToken = true;
+                } else {
+                    throw new ServiceException("查询孔夫子获取配送方式列表异常-" + JSONObject.toJSONString(response));
+                }
+            } else {
+                flag = false;
+            }
+        }
+        if (ObjectUtil.isEmpty(response.getSuccessResponse())) return new ArrayList<>();
+        List<LogisticsMethodResponse> logisticsMethodResponses = new ArrayList<>();
+        for (DeliveryMethodResponse deliveryMethodResponse : response.getSuccessResponse()) {
+            if (ObjectUtil.isNotEmpty(deliveryMethodResponse.getCompanies())) {
+                for (DeliveryMethodResponse.company company : deliveryMethodResponse.getCompanies()) {
+                    LogisticsMethodResponse logisticsMethod = LogisticsMethodResponse.builder()
+                            .methodId(deliveryMethodResponse.getShippingId() + "_" + company.getShippingCom())
+                            .methodName(deliveryMethodResponse.getShippingName() + "——" + company.getShippingComName())
+                            .build();
+                    logisticsMethodResponses.add(logisticsMethod);
+                }
+            } else {
+                LogisticsMethodResponse logisticsMethod = LogisticsMethodResponse.builder()
+                        .methodId(deliveryMethodResponse.getShippingId())
+                        .methodName(deliveryMethodResponse.getShippingName())
+                        .build();
+                logisticsMethodResponses.add(logisticsMethod);
+            }
+        }
+        return logisticsMethodResponses;
+    }
+
+    @Override
+    public R<Boolean> orderDelivery(Long shopId, Long orderId, String shippingId, String shippingCom, String shipmentNum, String userDefined, String moreShipmentNum) {
+        // 根据shopId获取店铺信息
+        ShopVo shop = erpClient.getShopInfo(ClientConstantUtils.ERP_URL, shopId);
+        String token = shop.getToken();
+        String refreshToken = shop.getRefreshToken();
+
+        boolean flag = true; // 循环标志
+        boolean isRefreshToken = false; // 是否已刷新token
+
+        KfzBaseResponse<OrderDeliveryResponse> response = null;
+
+        while (flag) {
+            response = phpClient.orderDelivery(ClientConstantUtils.PHP_URL, token, orderId, shippingId, shippingCom, shipmentNum, userDefined, moreShipmentNum);
+            if (!isRefreshToken && ObjectUtil.isNotEmpty(response.getErrorResponse())) {
+                // 若ErrorResponse不为空判断是否需要刷新token
+                log.info("查询孔夫子获取配送方式列表响应失败-{}", JSONObject.toJSONString(response.getErrorResponse()));
+                List<Long> tokenErrorCode = new ArrayList<>();
+                tokenErrorCode.add(1000L);
+                tokenErrorCode.add(1001L);
+                tokenErrorCode.add(2000L);
+                tokenErrorCode.add(2001L);
+                if (tokenErrorCode.contains(response.getErrorResponse().getCode())) {
+                    // token原因请求失败则刷新token
+                    token = tokenUtils.refreshToken(refreshToken, shopId);
+                    isRefreshToken = true;
+                } else {
+                    return R.fail(response.getErrorResponse().getSubMsg(), Boolean.FALSE);
+                }
+            } else {
+                flag = false;
+            }
+        }
+        return R.ok(Boolean.TRUE);
+    }
+
 }
