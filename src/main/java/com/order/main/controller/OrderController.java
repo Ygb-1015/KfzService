@@ -1,6 +1,7 @@
 package com.order.main.controller;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.order.main.dto.R;
 import com.order.main.dto.requst.OrderDeliveryRequest;
 import com.order.main.dto.response.LogisticsMethodResponse;
 import com.order.main.exception.ServiceException;
@@ -39,7 +40,7 @@ public class OrderController {
      * 订单发货
      */
     @PostMapping("/deliver")
-    public Boolean orderDelivery(@Validated @RequestBody OrderDeliveryRequest request) {
+    public R<Boolean> orderDelivery(@Validated @RequestBody OrderDeliveryRequest request) {
         if (!request.getShippingId().equals("noLogistics")) {
             if (ObjectUtil.isEmpty(request.getShippingCom())) throw new ServiceException("快递公司(shippingCom)不能为空");
             if (ObjectUtil.isEmpty(request.getShipmentNum())) throw new ServiceException("快递单号(shipmentNum)不能为空");

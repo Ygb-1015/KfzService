@@ -60,7 +60,17 @@ public enum AfterSalesStatusEnum {
 
     REPLACEMENT_WAIT_FOR_SELLER_SHIPMENT(32, "补寄待商家发货"),
 
-    AGREE_REFUND_AFTER_RECALL_WAIT_FOR_SELLER(33, "同意召回后退款，待商家召回");
+    AGREE_REFUND_AFTER_RECALL_WAIT_FOR_SELLER(33, "同意召回后退款，待商家召回"),
+
+    SHIPPED_RETURNING(600, "申请退货中"),
+
+    SHIPPED_RETURN_REJECTED(601, "拒绝退货中"),
+
+    RETURN_PENDING(602, "待买家退货"),
+
+    RETURNED_TO_RECEIPT(603, "待卖家确认收货并退款"),
+
+    ;
 
     /**
      * code

@@ -2,6 +2,7 @@ package com.order.main.service.impl;
 
 import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSONObject;
+import com.order.main.dto.R;
 import com.order.main.dto.bo.*;
 import com.order.main.dto.requst.OrderListByShopIdRequest;
 import com.order.main.dto.response.*;
@@ -274,31 +275,36 @@ public class OrderServiceImpl implements OrderService {
 
                 }
                 // 售后状态
-                if (KfzOrderStatusEnum.SHIPPED_REFUNDING.getCode().equals(order.getOrderStatus())) {
-                    tShopOrderVo.setAfterSalesStatus(AfterSalesStatusEnum.REFUND_WAIT_FOR_SELLER.getCode());
-                } else if (KfzOrderStatusEnum.REFUND_DEALD.getCode().equals(order.getOrderStatus()) || KfzOrderStatusEnum.SHIPPED_REFUNDED.getCode().equals(order.getOrderStatus())) {
+                if (KfzOrderStatusEnum.PAID_REFUNDING.getCode().equals(order.getOrderStatus())) {
+                    tShopOrderVo.setAfterSalesStatus(AfterSalesStatusEnum.BUYER_WAIT_FOR_REFUND.getCode());
+                } else if (KfzOrderStatusEnum.PAID_REFUND_REJECTED.getCode().equals(order.getOrderStatus()) || KfzOrderStatusEnum.SHIPPED_REFUND_REJECTED.getCode().equals(order.getOrderStatus())) {
+                    tShopOrderVo.setAfterSalesStatus(AfterSalesStatusEnum.REJECT_REFUND_WAIT_FOR_BUYER.getCode());
+                } else if (KfzOrderStatusEnum.PAID_REFUNDED.getCode().equals(order.getOrderStatus()) || KfzOrderStatusEnum.SHIPPED_REFUNDED.getCode().equals(order.getOrderStatus()) || KfzOrderStatusEnum.SHIPPED_RETURNED.getCode().equals(order.getOrderStatus())) {
                     tShopOrderVo.setAfterSalesStatus(AfterSalesStatusEnum.REFUND_SUCCESS.getCode());
+                } else if (KfzOrderStatusEnum.SHIPPED_REFUNDING.getCode().equals(order.getOrderStatus())) {
+                    tShopOrderVo.setAfterSalesStatus(AfterSalesStatusEnum.REFUND_WAIT_FOR_SELLER.getCode());
+                } else if (KfzOrderStatusEnum.SHIPPED_RETURNING.getCode().equals(order.getOrderStatus())) {
+                    tShopOrderVo.setAfterSalesStatus(AfterSalesStatusEnum.SHIPPED_RETURNING.getCode());
+                } else if (KfzOrderStatusEnum.SHIPPED_RETURN_REJECTED.getCode().equals(order.getOrderStatus())) {
+                    tShopOrderVo.setAfterSalesStatus(AfterSalesStatusEnum.SHIPPED_RETURN_REJECTED.getCode());
+                } else if (KfzOrderStatusEnum.RETURN_PENDING.getCode().equals(order.getOrderStatus())) {
+                    tShopOrderVo.setAfterSalesStatus(AfterSalesStatusEnum.RETURN_PENDING.getCode());
+                } else if (KfzOrderStatusEnum.RETURNED_TO_RECEIPT.getCode().equals(order.getOrderStatus())) {
+                    tShopOrderVo.setAfterSalesStatus(AfterSalesStatusEnum.RETURNED_TO_RECEIPT.getCode());
                 } else {
                     tShopOrderVo.setAfterSalesStatus(AfterSalesStatusEnum.NONE.getCode());
                 }
-                // 买家留言信息
-                tShopOrderVo.setBuyerMemo(order.getBuyerRemark());
+
                 // 成交状态
                 if (KfzOrderStatusEnum.SUCCESSFUL.getCode().equals(order.getOrderStatus())) {
                     tShopOrderVo.setConfirmStatus(ConfirmStatusEnum.SOLD.getCode());
-                } else if (KfzOrderStatusEnum.BUYER_CANCELLED.getCode().equals(order.getOrderStatus()) || KfzOrderStatusEnum.SELLER_CANCELLED_BEFORE_CONFIRM.getCode().equals(order.getOrderStatus()) || KfzOrderStatusEnum.ADMIN_CLOSED_BEFORE_CONFIRM.getCode().equals(order.getOrderStatus())) {
+                } else if (KfzOrderStatusEnum.BUYER_CANCELLED_BEFORE_CONFIRM.getCode().equals(order.getOrderStatus()) || KfzOrderStatusEnum.BUYER_CANCELLED_BEFORE_PAY.getCode().equals(order.getOrderStatus()) ||
+                        KfzOrderStatusEnum.SELLER_CANCELLED_BEFORE_CONFIRM.getCode().equals(order.getOrderStatus()) || KfzOrderStatusEnum.SELLER_CLOSED_BEFORE_PAY.getCode().equals(order.getOrderStatus()) ||
+                        KfzOrderStatusEnum.ADMIN_CLOSED_BEFORE_CONFIRM.getCode().equals(order.getOrderStatus()) || KfzOrderStatusEnum.SELLER_CANCELLED_AFTER_PAY.getCode().equals(order.getOrderStatus())) {
                     tShopOrderVo.setConfirmStatus(ConfirmStatusEnum.CANCEL.getCode());
                 } else {
                     tShopOrderVo.setConfirmStatus(ConfirmStatusEnum.NOT_SOLD.getCode());
                 }
-                // 成交时间
-                tShopOrderVo.setConfirmTime(order.getPayTime());
-                // 折扣金额，单位：元，折扣金额=平台优惠+商家优惠+团长免单优惠金额
-                tShopOrderVo.setDiscountAmount(new BigDecimal(order.getFavorableMoney()));
-                // 商品金额
-                tShopOrderVo.setGoodsAmount(new BigDecimal(order.getGoodsAmount()));
-                // 订单编号
-                tShopOrderVo.setOrderSn(order.getOrderId().toString());
                 // 订单状态
                 if (KfzOrderStatusEnum.PAID_TO_SHIP.getCode().equals(order.getOrderStatus())) {
                     tShopOrderVo.setOrderStatus(OrderStatusEnum.WAIT_FOR_SHIPMENT.getCode());
@@ -307,6 +313,16 @@ public class OrderServiceImpl implements OrderService {
                 } else if (KfzOrderStatusEnum.SUCCESSFUL.getCode().equals(order.getOrderStatus())) {
                     tShopOrderVo.setOrderStatus(OrderStatusEnum.SIGNED.getCode());
                 }
+                // 买家留言信息
+                tShopOrderVo.setBuyerMemo(order.getBuyerRemark());
+                // 成交时间
+                tShopOrderVo.setConfirmTime(order.getPayTime());
+                // 折扣金额，单位：元，折扣金额=平台优惠+商家优惠+团长免单优惠金额
+                tShopOrderVo.setDiscountAmount(new BigDecimal(order.getFavorableMoney()));
+                // 商品金额
+                tShopOrderVo.setGoodsAmount(new BigDecimal(order.getGoodsAmount()));
+                // 订单编号
+                tShopOrderVo.setOrderSn(order.getOrderId().toString());
                 // 支付金额
                 tShopOrderVo.setPayAmount(new BigDecimal(order.getOrderAmount()));
                 // 支付时间
@@ -452,7 +468,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public Boolean orderDelivery(Long shopId, Long orderId, String shippingId, String shippingCom, String shipmentNum, String userDefined, String moreShipmentNum) {
+    public R<Boolean> orderDelivery(Long shopId, Long orderId, String shippingId, String shippingCom, String shipmentNum, String userDefined, String moreShipmentNum) {
         // 根据shopId获取店铺信息
         ShopVo shop = erpClient.getShopInfo(ClientConstantUtils.ERP_URL, shopId);
         String token = shop.getToken();
@@ -478,13 +494,13 @@ public class OrderServiceImpl implements OrderService {
                     token = tokenUtils.refreshToken(refreshToken, shopId);
                     isRefreshToken = true;
                 } else {
-                    throw new ServiceException("查询孔夫子获取配送方式列表异常-" + JSONObject.toJSONString(response));
+                    return R.fail(response.getErrorResponse().getSubMsg(), Boolean.FALSE);
                 }
             } else {
                 flag = false;
             }
         }
-        return true;
+        return R.ok(Boolean.TRUE);
     }
 
 }
