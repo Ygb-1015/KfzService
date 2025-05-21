@@ -451,7 +451,8 @@ public class GoodsServiceImpl implements GoodsService {
         String[] systemSetUpArr = shopDetailVo.get("systemSetUp") != null ? shopDetailVo.get("mySetUp").toString().split(",")  : new String[0];
         //获取系统默认ISBN黑名单
         String isbnNoStr = EasyExcelUtil.readFileContentString(UrlUtil.getUrl()+"isbnNo.txt");
-
+        //获取仓库模板
+        Map logisticsListMap = (Map) map.get("logisticsListMap");
         /**
          * 封面水印  specSyImageUrl
          */
@@ -575,7 +576,7 @@ public class GoodsServiceImpl implements GoodsService {
             /**
              * 价格
              */
-            kongfzAddGoodMap.put("price",getPrice(shopDetailVo,bookBaseInfoVo,priceTemplateVo));
+            kongfzAddGoodMap.put("price",getPrice(shopDetailVo,bookBaseInfoVo,priceTemplateVo,logisticsListMap));
             /**
              * 库存
              */
@@ -788,12 +789,27 @@ public class GoodsServiceImpl implements GoodsService {
     /**
      * 获取价格
      */
-    public String getPrice(Map shopDetailVo,Map bookBaseInfoVo,Map priceTemplateVo){
+    public String getPrice(Map shopDetailVo,Map bookBaseInfoVo,Map priceTemplateVo,Map logisticsListMap){
         //校验价格区间，低于最小价格则改为最低价
         BigDecimal priceL = null;
         BigDecimal priceOld = new BigDecimal(bookBaseInfoVo.get("price").toString()).divide(new BigDecimal(100));
         BigDecimal highPrice = new BigDecimal(String.valueOf(shopDetailVo.get("highPrice"))).divide(new BigDecimal(100));
         BigDecimal lowPrice = new BigDecimal(String.valueOf(shopDetailVo.get("lowerPrice"))).divide(new BigDecimal(100));
+
+        //处理价格  原始价格是书价 还是总价（书价+运费）
+        if(priceTemplateVo.get("priceType") != null
+                && priceTemplateVo.get("priceType").equals("1")
+                && bookBaseInfoVo.get("artNo") != null){
+            // 0 不变  1 总价
+            String artNo = bookBaseInfoVo.get("artNo").toString().substring(0,2);
+            //获取运费模板
+            Map logisticsMap = (Map) logisticsListMap.get(artNo);
+            //获取最低首费
+            System.out.println("获取最低首费");
+            String firPrice = logisticsMap.get("firPrice").toString();
+            System.out.println("最低首费："+firPrice);
+            priceOld = new BigDecimal(String.valueOf(priceOld)).add(new BigDecimal(firPrice));
+        }
 
         if(priceOld.compareTo(lowPrice) < 0){
             //小于最低价
