@@ -5,9 +5,9 @@ import org.springframework.stereotype.Component;
 @Component
 public final class UrlUtil {
 
-//    public static String getUrl(){
-//        return "/zhishu/";
-//    }
+    // public static String getUrl() {
+    //     return "/zhishu/";
+    // }
 
     public static String getUrl(){
         return "/www/wwwroot/baseApi/file/";

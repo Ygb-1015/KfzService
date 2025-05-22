@@ -494,7 +494,11 @@ public class OrderServiceImpl implements OrderService {
                     token = tokenUtils.refreshToken(refreshToken, shopId);
                     isRefreshToken = true;
                 } else {
-                    return new R<Boolean>(Integer.getInteger(response.getErrorResponse().getSubCode()), response.getErrorResponse().getSubMsg(), Boolean.FALSE);
+                    String msg = response.getErrorResponse().getMsg();
+                    if (ObjectUtil.isNotEmpty(response.getErrorResponse().getSubMsg())) {
+                        msg = response.getErrorResponse().getSubMsg();
+                    }
+                    return new R<Boolean>(response.getErrorResponse().getCode().intValue(), msg, Boolean.FALSE);
                 }
             } else {
                 flag = false;
