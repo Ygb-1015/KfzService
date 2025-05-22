@@ -19,7 +19,7 @@ public final class UrlUtil {
      * @return
      */
     public static String getImageUrl(){
-        return "https://test.temp.img.buzhiyushu.cn/";
+        return "https://temp.img.buzhiyushu.cn/";
     }
 
     public static String getImageUrlStatic(){

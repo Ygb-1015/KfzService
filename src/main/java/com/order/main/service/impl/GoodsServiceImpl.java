@@ -322,8 +322,8 @@ public class GoodsServiceImpl implements GoodsService {
             String errorMsg = errorResponse.get("subMsg").toString();
             if (errorResponse.get("data") != null){
                 Map data = (Map) errorResponse.get("data");
-                Collection<Integer> values = data.values();
-                for (Integer value : values) {
+                Collection<String> values = data.values();
+                for (String value : values) {
                     System.out.println(value);
                     errorMsg = errorMsg + ";" + value;
                 }
@@ -618,9 +618,23 @@ public class GoodsServiceImpl implements GoodsService {
             /**
              * 图片
              */
+            //bookImgUrl  excel上传的指定图片路径
+            //不为空代表excel上传，为空，代表未指定图片，从中央书库与用户实拍图获取图片
+            String bookImgUrl = bookBaseInfoVo.get("bookImgUrl") != null && StringUtils.isNotEmpty(bookBaseInfoVo.get("bookImgUrl")+"") ? bookBaseInfoVo.get("bookImgUrl").toString() : null;
+
             //获取实拍图
-            String[] useImages = bookBaseInfoVo.get("useImages") != null && StringUtils.isNotEmpty(bookBaseInfoVo.get("useImages").toString()) ? bookBaseInfoVo.get("useImages").toString().split(",") : new String[0];
-            System.out.println("用户实拍图数量------:"+useImages.length + ":"+useImages);
+            String[] useImages;
+
+            if(bookImgUrl != null){
+                useImages = new String[1];
+                useImages[0] = bookImgUrl;
+            }else{
+                useImages = bookBaseInfoVo.get("useImages") != null && StringUtils.isNotEmpty(bookBaseInfoVo.get("useImages").toString()) ? bookBaseInfoVo.get("useImages").toString().split(",") : new String[0];
+            }
+
+            System.out.println("用户实拍图数量------:"+useImages.length + ":"+JsonUtil.transferToJson(useImages));
+
+
             //无水印图片记录
             String noSyImage = "";
             String images = "";
@@ -648,7 +662,12 @@ public class GoodsServiceImpl implements GoodsService {
                 images = image;
             }else{
                 //第一张图作为首图,第一张肯定有水印
-                String imageFirst = UploadUtil.getFiles("",bookBaseInfoVo.get("bookName").toString()) + useImages[0];
+                String imageFirst = "";
+                if(useImages[0].contains("http://") || useImages[0].contains("https://")){
+                    imageFirst = useImages[0];
+                }else{
+                    imageFirst = UploadUtil.getFiles("",bookBaseInfoVo.get("bookName").toString()) + useImages[0];
+                }
                 noSyImage = imageFirst;
                 if(specSyImageUrl != ""){
                     imageFirst = getImageSy(specSyImageUrl,imageFirst,bookBaseInfoVo.get("bookName").toString());
@@ -659,25 +678,45 @@ public class GoodsServiceImpl implements GoodsService {
                 if(shopDetailVo.get("watermarkPosition").equals("0")){
                     //为0是全部增加水印
                     for(String useImage : useImages){
-
+                        if(StringUtils.isEmpty(useImage)){
+                            continue;
+                        }
                         //图片路径
-                        String iamge = UploadUtil.getFiles("",bookBaseInfoVo.get("bookName").toString()) + useImage;
+                        String image = "";
+                        //若路径存在http 或者 https 则直接使用
+                        if(useImage.contains("http://") || useImage.contains("https://")){
+                            image = useImage;
+                        }else{
+                            image = UploadUtil.getFiles("",bookBaseInfoVo.get("bookName").toString()) + useImage;
+                        }
+
                         //水印不为空则增加水印
                         if(specSyImageUrl != ""){
-                            iamge = getImageSy(specSyImageUrl,iamge,bookBaseInfoVo.get("bookName").toString());
+                            image = getImageSy(specSyImageUrl,image,bookBaseInfoVo.get("bookName").toString());
                         }
-                        System.out.println("用户上传后续-------------"+iamge+"；书名:"+bookBaseInfoVo.get("bookName").toString());
+                        System.out.println("用户上传后续-------------"+image+"；书名:"+bookBaseInfoVo.get("bookName").toString());
                         //记录图片
                         if(images == ""){
-                            images = iamge;
+                            images = image;
                         }else{
-                            images = images + ";" + iamge;
+                            images = images + ";" + image;
                         }
                     }
                 }else{
                     //实拍图 为1时，正常不加水印图片
                     for(String useImage : useImages){
-                        String image = UploadUtil.getFiles("",bookBaseInfoVo.get("bookName").toString()) + useImage;
+                        if(StringUtils.isEmpty(useImage)){
+                            continue;
+                        }
+                        //图片路径
+                        String image = "";
+                        //若路径存在http 或者 https 则直接使用
+                        if(useImage.contains("http://") || useImage.contains("https://")){
+                            image = useImage;
+                        }else{
+                            image = UploadUtil.getFiles("",bookBaseInfoVo.get("bookName").toString()) + useImage;
+                        }
+
                         System.out.println("实拍图 为1时，正常不加水印图片：用户上传后续-------------"+image+"；书名:"+bookBaseInfoVo.get("bookName").toString());
                         if(images == ""){
                             images = image;
