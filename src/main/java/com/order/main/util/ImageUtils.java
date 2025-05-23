@@ -14,15 +14,16 @@ public class ImageUtils {
 
     private static final String IMAGE_PATH = "/www/wwwroot/temp/img/"; // 图片完整路径
 //    private static final String IMAGE_PATH = "D:/zhishu/";
+
     /**
      * 生成图片并保存到缓存文件夹
      *
-     * @param text   要显示的字符串
-     * @param width  图片宽度
-     * @param height 图片高度
+     * @param text     要显示的字符串
+     * @param width    图片宽度
+     * @param height   图片高度
      * @param fileName 文件名称  例如 123.jpg
      */
-    public static String generateImage(String text, int width, int height,String fileName) {
+    public static String generateImage(String text, int width, int height, String fileName) {
         // 创建一个白底的BufferedImage
         BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         Graphics2D g2d = image.createGraphics();
@@ -51,9 +52,9 @@ public class ImageUtils {
 
         // 保存图片到指定目录下
         try {
-            File outputFile = new File(IMAGE_PATH+fileName);
+            File outputFile = new File(IMAGE_PATH + fileName);
             ImageIO.write(image, "jpg", outputFile);
-            return UrlUtil.getImageUrl()+fileName;
+            return UrlUtil.getImageUrl() + fileName;
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -61,11 +62,11 @@ public class ImageUtils {
     }
 
     public static void deleteImage(String absolutePath) {
-        if(absolutePath.contains(UrlUtil.getImageUrl())){
+        if (absolutePath.contains(UrlUtil.getImageUrl())) {
             String[] markStr = absolutePath.split("/");
-            String fileName = markStr[markStr.length-1];
-            absolutePath = UrlUtil.getImageUrlStatic()+fileName;
-            System.out.println("需要删除的文件:"+absolutePath);
+            String fileName = markStr[markStr.length - 1];
+            absolutePath = UrlUtil.getImageUrlStatic() + fileName;
+            System.out.println("需要删除的文件:" + absolutePath);
         }
         File file = new File(absolutePath);
         if (file.exists()) {
@@ -95,11 +96,11 @@ public class ImageUtils {
     /**
      * 将主图和水印图片合成一张，水印图片完美覆盖主图
      *
-     * @param mainImageUrl    主图的 URL
+     * @param mainImageUrl      主图的 URL
      * @param watermarkImageUrl 水印图片的 URL
-     * @param fileName  文件名称
+     * @param fileName          文件名称
      */
-    public static String mergeImages(String mainImageUrl, String watermarkImageUrl,String fileName) throws IOException {
+    public static String mergeImages(String mainImageUrl, String watermarkImageUrl, String fileName) throws IOException {
         // 从 URL 读取主图
         BufferedImage mainImage = ImageIO.read(new URL(mainImageUrl));
         // 从 URL 读取水印图片
@@ -127,34 +128,42 @@ public class ImageUtils {
         // 释放资源
         g2d.dispose();
 
-        File outputFile = new File(IMAGE_PATH+fileName);
+        File outputFile = new File(IMAGE_PATH + fileName);
         ImageIO.write(combined, "PNG", outputFile);
 
         // 返回临时文件的路径
-        return UrlUtil.getImageUrl()+fileName;
+        return UrlUtil.getImageUrl() + fileName;
     }
 
     /**
      * 处理孔网图片路径将缩略图转为正常图片
-     * @param url
+     *
+     * @param pathOrFileName
      * @return
      */
-    public static String modifyUrl(String url) {
-        // 找到最后一个斜杠和.jpg之间的字符串
-        int lastSlashIndex = url.lastIndexOf('/');
-        int dotJpgIndex = url.indexOf(".jpg");
+    public static String modifyUrl(String pathOrFileName) {
+        if (pathOrFileName == null || pathOrFileName.isEmpty()) return null;
+        int dotJpgIndex = pathOrFileName.indexOf(".jpg");
 
-        // 确保找到合法的位置
-        if (lastSlashIndex != -1 && dotJpgIndex != -1 && lastSlashIndex < dotJpgIndex) {
-            // 获取需要修改的部分
-            String toBeModifiedPart = url.substring(lastSlashIndex + 1, dotJpgIndex);
-            // 修改's'为'n'
-            String modifiedPart = toBeModifiedPart.length() > 0 ?
-                    toBeModifiedPart.substring(0, toBeModifiedPart.length() - 1) + 'n' : "";
-            // 组装最终URL
-            return url.substring(0, lastSlashIndex + 1) + modifiedPart + ".jpg";
+        if (dotJpgIndex == -1) {
+            return pathOrFileName; // 不是 jpg 文件，不做处理
         }
-        return url; // 如果没有找到合适的位置，则返回原始URL
+
+        // 找到最后一个 '_' 出现在 .jpg 前的位置
+        int lastUnderscoreIndex = pathOrFileName.lastIndexOf('_', dotJpgIndex);
+
+        if (lastUnderscoreIndex != -1 && dotJpgIndex - lastUnderscoreIndex == 2) {
+            // 判断是否是 "_s.jpg"
+            char beforeDot = pathOrFileName.charAt(lastUnderscoreIndex + 1);
+            if (beforeDot == 's') {
+                // 替换 '_s' 为 '_n'
+                StringBuilder sb = new StringBuilder(pathOrFileName);
+                sb.setCharAt(lastUnderscoreIndex + 1, 'n');
+                return sb.toString();
+            }
+        }
+
+        return pathOrFileName;
     }
 
 }

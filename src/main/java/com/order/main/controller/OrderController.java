@@ -6,6 +6,7 @@ import com.order.main.dto.requst.OrderDeliveryRequest;
 import com.order.main.dto.response.LogisticsMethodResponse;
 import com.order.main.exception.ServiceException;
 import com.order.main.service.OrderService;
+import com.order.main.util.ImageUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -49,6 +50,14 @@ public class OrderController {
             if (ObjectUtil.isEmpty(request.getUserDefined())) throw new ServiceException("用户自定义物流公司(userDefined)不能为空");
         }
         return orderService.orderDelivery(request.getShopId(), request.getOrderId(), request.getShippingId(), request.getShippingCom(), request.getShipmentNum(), request.getUserDefined(), request.getMoreShipmentNum());
+    }
+
+    /**
+     * 测试
+     */
+    @GetMapping("/test")
+    public String test(String url) {
+        return ImageUtils.modifyUrl(url);
     }
 
 }
