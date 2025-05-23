@@ -52,12 +52,4 @@ public class OrderController {
         return orderService.orderDelivery(request.getShopId(), request.getOrderId(), request.getShippingId(), request.getShippingCom(), request.getShipmentNum(), request.getUserDefined(), request.getMoreShipmentNum());
     }
 
-    /**
-     * 测试
-     */
-    @GetMapping("/test")
-    public String test(String url) {
-        return ImageUtils.modifyUrl(url);
-    }
-
 }
