@@ -134,4 +134,27 @@ public class ImageUtils {
         return UrlUtil.getImageUrl()+fileName;
     }
 
+    /**
+     * 处理孔网图片路径将缩略图转为正常图片
+     * @param url
+     * @return
+     */
+    public static String modifyUrl(String url) {
+        // 找到最后一个斜杠和.jpg之间的字符串
+        int lastSlashIndex = url.lastIndexOf('/');
+        int dotJpgIndex = url.indexOf(".jpg");
+
+        // 确保找到合法的位置
+        if (lastSlashIndex != -1 && dotJpgIndex != -1 && lastSlashIndex < dotJpgIndex) {
+            // 获取需要修改的部分
+            String toBeModifiedPart = url.substring(lastSlashIndex + 1, dotJpgIndex);
+            // 修改's'为'n'
+            String modifiedPart = toBeModifiedPart.length() > 0 ?
+                    toBeModifiedPart.substring(0, toBeModifiedPart.length() - 1) + 'n' : "";
+            // 组装最终URL
+            return url.substring(0, lastSlashIndex + 1) + modifiedPart + ".jpg";
+        }
+        return url; // 如果没有找到合适的位置，则返回原始URL
+    }
+
 }
