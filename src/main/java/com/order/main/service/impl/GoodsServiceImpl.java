@@ -11,19 +11,11 @@ import com.order.main.service.client.ErpClient;
 import com.order.main.service.client.PhpClient;
 import com.order.main.util.*;
 import com.pdd.pop.sdk.common.util.JsonUtil;
-import com.pdd.pop.sdk.http.PopBaseHttpResponse;
-import com.pdd.pop.sdk.http.PopClient;
-import com.pdd.pop.sdk.http.PopHttpClient;
-import com.pdd.pop.sdk.http.api.pop.request.PddGoodsAddRequest;
-import com.pdd.pop.sdk.http.api.pop.response.PddGoodsAddResponse;
-import com.pdd.pop.sdk.http.api.pop.response.PddGoodsCatRuleGetResponse;
-import com.pdd.pop.sdk.http.api.pop.response.PddGoodsSpecIdGetResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -282,15 +274,17 @@ public class GoodsServiceImpl implements GoodsService {
             Map successResponse = (Map) dataMap.get("successResponse");
             Map kongkzImage = (Map) successResponse.get("image");
 
+            String kongkzImageStr = kongkzImage.get("url").toString().replace("_s.","_n.");
+
             if (i == 0) {
-                images = kongkzImage.get("url").toString();
+                images = kongkzImageStr;
             } else {
-                images = images + ";" + kongkzImage.get("url").toString();
+                images = images + ";" + kongkzImageStr;
             }
             // 当图片数量不足八张时
             if (i == imagesArr.length - 1 && i < 8) {
                 for (int j = i; j < 7; j++) {
-                    images = images + ";" + kongkzImage.get("url").toString();
+                    images = images + ";" + kongkzImageStr;
                 }
             }
         }
@@ -318,10 +312,32 @@ public class GoodsServiceImpl implements GoodsService {
         Map dataMap = JsonUtil.transferToObj(itemAdd(request), Map.class);
         System.out.println("-----------------------调用上传商品接口：" + JsonUtil.transferToJson(dataMap));
         Map errorResponse = (Map) dataMap.get("errorResponse");
+
+        //如果报错信息不为空，并且存在品相必须为字样，则将品相改为95品重新发布
+        String errorMsg = "";
         if (errorResponse != null) {
             System.out.println("---------------------上传报错");
             System.out.println(JsonUtil.transferToJson(errorResponse) + "------------");
-            String errorMsg = errorResponse.get("subMsg").toString();
+            errorMsg = errorResponse.get("subMsg").toString();
+            if (errorResponse.get("data") != null) {
+                Map data = (Map) errorResponse.get("data");
+                Collection<String> values = data.values();
+                for (String value : values) {
+                    System.out.println(value);
+                    errorMsg = errorMsg + ";" + value;
+                }
+            }
+            if(errorMsg.contains("品相必须为")){
+                request.setQuality("95");
+                dataMap = JsonUtil.transferToObj(itemAdd(request), Map.class);
+                errorResponse = (Map) dataMap.get("errorResponse");
+            }
+        }
+        
+        if (errorResponse != null) {
+            System.out.println("---------------------上传报错");
+            System.out.println(JsonUtil.transferToJson(errorResponse) + "------------");
+            errorMsg = errorResponse.get("subMsg").toString();
             if (errorResponse.get("data") != null) {
                 Map data = (Map) errorResponse.get("data");
                 Collection<String> values = data.values();
