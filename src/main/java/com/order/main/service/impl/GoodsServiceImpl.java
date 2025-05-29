@@ -308,7 +308,6 @@ public class GoodsServiceImpl implements GoodsService {
         request.setBinding(map.get("binding") == null || StringUtils.isEmpty(map.get("binding").toString()) ? "平装" : map.get("binding").toString());
         request.setOtherName(map.get("otherName") == null ? "" : map.get("otherName").toString());
 
-
         Map dataMap = JsonUtil.transferToObj(itemAdd(request), Map.class);
         System.out.println("-----------------------调用上传商品接口：" + JsonUtil.transferToJson(dataMap));
         Map errorResponse = (Map) dataMap.get("errorResponse");
@@ -333,7 +332,7 @@ public class GoodsServiceImpl implements GoodsService {
                 errorResponse = (Map) dataMap.get("errorResponse");
             }
         }
-        
+
         if (errorResponse != null) {
             System.out.println("---------------------上传报错");
             System.out.println(JsonUtil.transferToJson(errorResponse) + "------------");
@@ -499,6 +498,8 @@ public class GoodsServiceImpl implements GoodsService {
         // 记录循环次数
         int markI = 1;
         for (Map bookBaseInfoVo : bookBaseInfoVoList) {
+            //模孔夫子模板号
+            String tpl = bookBaseInfoVo.get("tpl") == null ? shopDetailVo.get("bookTemplate").toString() : bookBaseInfoVo.get("tpl").toString();
             // 暂停/启动线程
             taskWait(String.valueOf(Thread.currentThread().getId()));
             // 创建数据List
@@ -507,7 +508,7 @@ public class GoodsServiceImpl implements GoodsService {
             dataList.add(bookBaseInfoVo.get("bookName") == null ? "" : bookBaseInfoVo.get("bookName").toString());
             dataList.add(new BigDecimal(bookBaseInfoVo.get("price").toString()).divide(new BigDecimal(100)).toString());
             dataList.add(String.valueOf(bookBaseInfoVo.get("stock")));
-            if (bookBaseInfoVo.get("id") == null || bookBaseInfoVo.get("id").equals("")) {
+            if ((bookBaseInfoVo.get("id") == null || bookBaseInfoVo.get("id").equals("")) && !tpl.equals("2")) {
                 wirteExcel(taskId, shopVo, bookBaseInfoVoList, dataList, logsMap, filePath, "未在孔网查询到图书条目", autoMark, userId);
                 continue;
             }
@@ -594,8 +595,23 @@ public class GoodsServiceImpl implements GoodsService {
             kongfzAddGoodMap.put("shopId", shopVo.get("id"));
             kongfzAddGoodMap.put("goodId", bookBaseInfoVo.get("goodsId"));
             kongfzAddGoodMap.put("token", shopVo.get("token"));
-            kongfzAddGoodMap.put("tpl", shopDetailVo.get("bookTemplate"));
-            kongfzAddGoodMap.put("catId", "");
+            //模板17
+            kongfzAddGoodMap.put("tpl", tpl);
+
+            /**
+             * 12043000000000000 线装古籍 - 小说
+             */
+            String catId = "";
+            if(tpl.equals("2")){
+                catId = "12043000000000000";
+                bookBaseInfoVo.put("isbn","");
+            }
+
+            kongfzAddGoodMap.put("catId", catId);
+
+
+
+            kongfzAddGoodMap.put("isbn", bookBaseInfoVo.get("isbn"));
             kongfzAddGoodMap.put("myCatId", "");
             kongfzAddGoodMap.put("otherName", bookBaseInfoVo.get("bookName"));
             /**
@@ -767,7 +783,8 @@ public class GoodsServiceImpl implements GoodsService {
             kongfzAddGoodMap.put("weight", shopDetailVo.get("bookWeight"));
             kongfzAddGoodMap.put("weightPiece", shopDetailVo.get("standardNumber"));
 
-            kongfzAddGoodMap.put("isbn", bookBaseInfoVo.get("isbn"));
+
+
             kongfzAddGoodMap.put("author", bookBaseInfoVo.get("author"));
             kongfzAddGoodMap.put("press", bookBaseInfoVo.get("publisher"));
             kongfzAddGoodMap.put("pubDate", bookBaseInfoVo.get("publicationTime"));
