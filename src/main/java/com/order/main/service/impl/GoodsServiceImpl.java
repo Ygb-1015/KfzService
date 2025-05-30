@@ -499,7 +499,7 @@ public class GoodsServiceImpl implements GoodsService {
         int markI = 1;
         for (Map bookBaseInfoVo : bookBaseInfoVoList) {
             //模孔夫子模板号
-            String tpl = bookBaseInfoVo.get("tpl") == null ? shopDetailVo.get("bookTemplate").toString() : bookBaseInfoVo.get("tpl").toString();
+            String tpl = bookBaseInfoVo.get("tpl") == null || StringUtils.isEmpty(bookBaseInfoVo.get("tpl").toString()) ? shopDetailVo.get("bookTemplate").toString() : bookBaseInfoVo.get("tpl").toString();
             // 暂停/启动线程
             taskWait(String.valueOf(Thread.currentThread().getId()));
             // 创建数据List
@@ -604,7 +604,6 @@ public class GoodsServiceImpl implements GoodsService {
             String catId = "";
             if(tpl.equals("2")){
                 catId = "12043000000000000";
-                bookBaseInfoVo.put("isbn","");
             }
 
             kongfzAddGoodMap.put("catId", catId);
