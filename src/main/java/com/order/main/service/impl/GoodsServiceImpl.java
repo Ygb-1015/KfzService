@@ -273,9 +273,9 @@ public class GoodsServiceImpl implements GoodsService {
 
             Map successResponse = (Map) dataMap.get("successResponse");
             Map kongkzImage = (Map) successResponse.get("image");
-
+            System.out.println("上传的图片："+kongkzImage);
             String kongkzImageStr = kongkzImage.get("url").toString().replace("_s.","_n.");
-
+            System.out.println("修改后缀的图片："+kongkzImageStr);
             if (i == 0) {
                 images = kongkzImageStr;
             } else {
@@ -293,8 +293,9 @@ public class GoodsServiceImpl implements GoodsService {
         }
 
         request.setImages(images);
-
-        request.setItemDesc(map.get("itemDesc") == null ? "" : map.get("itemDesc").toString());
+        System.out.println("上传的图片："+images);
+//        request.setItemDesc(map.get("itemDesc") == null ? "" : map.get("itemDesc").toString());
+        request.setItemDesc("");
         request.setBearShipping(map.get("bearShipping").toString());
         request.setMouldId(Long.parseLong(map.get("mouldld").toString()));
         request.setWeight(map.get("weight") == null ? BigDecimal.ZERO : new BigDecimal(map.get("weight").toString()));
