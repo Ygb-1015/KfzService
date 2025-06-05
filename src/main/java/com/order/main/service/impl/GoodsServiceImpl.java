@@ -328,7 +328,12 @@ public class GoodsServiceImpl implements GoodsService {
                 }
             }
             if(errorMsg.contains("品相必须为")){
+                System.out.println("品相审核失败，设置为九五品，重新调用上传接口-------------------");
                 request.setQuality("95");
+                dataMap = JsonUtil.transferToObj(itemAdd(request), Map.class);
+                errorResponse = (Map) dataMap.get("errorResponse");
+            }else if(errorMsg.contains("图片上传失败")){
+                System.out.println("图片上传失败，重新调用上传接口--------------------");
                 dataMap = JsonUtil.transferToObj(itemAdd(request), Map.class);
                 errorResponse = (Map) dataMap.get("errorResponse");
             }
