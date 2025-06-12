@@ -229,13 +229,10 @@ public class GoodsServiceImpl implements GoodsService {
 
     @Override
     public String goodsAddOne(Map map) {
-
         GoodsItemAddRequest request = new GoodsItemAddRequest();
-
         request.setToken(map.get("token").toString());
         request.setTpl(map.get("tpl").toString());
         request.setCatId(map.get("catId") == null || map.get("catId").equals("") ? "43000000000000000" : map.get("catId").toString());
-        System.out.println("分类id：" + request.getCatId());
         request.setMyCatId(map.get("myCatId") == null ? "" : map.get("myCatId").toString());
         request.setItemName(map.get("itemName") == null ? "" : map.get("itemName").toString());
         request.setImportantDesc(map.get("importantDesc") == null ? "" : map.get("importantDesc").toString());
@@ -246,6 +243,9 @@ public class GoodsServiceImpl implements GoodsService {
         request.setItemSn(map.get("itemSn") == null ? "" : map.get("itemSn").toString());
         request.setImgUrl(map.get("imgUrl") == null ? "" : map.get("imgUrl").toString());
         request.setOriPrice(map.get("oriPrice") == null ? "" : map.get("oriPrice").toString());
+        request.setPageSize(map.get("pageSize") == null ? "" : map.get("pageSize").toString());
+        request.setWordNum(map.get("wordNum") == null || StringUtils.isEmpty(map.get("wordNum").toString()) ? "" : new BigDecimal(map.get("wordNum").toString()).divide(new BigDecimal(1000)).toString());
+        request.setUnifiedIsbn(map.get("unifiedIsbn") == null ? "" : map.get("unifiedIsbn").toString());
 
 
         // 获取实拍图网路路径
@@ -310,7 +310,6 @@ public class GoodsServiceImpl implements GoodsService {
         request.setOtherName(map.get("otherName") == null ? "" : map.get("otherName").toString());
 
         Map dataMap = JsonUtil.transferToObj(itemAdd(request), Map.class);
-        System.out.println("-----------------------调用上传商品接口：" + JsonUtil.transferToJson(dataMap));
         Map errorResponse = (Map) dataMap.get("errorResponse");
 
         //如果报错信息不为空，并且存在品相必须为字样，则将品相改为95品重新发布
@@ -332,8 +331,31 @@ public class GoodsServiceImpl implements GoodsService {
                 request.setQuality("95");
                 dataMap = JsonUtil.transferToObj(itemAdd(request), Map.class);
                 errorResponse = (Map) dataMap.get("errorResponse");
-            }else if(errorMsg.contains("图片上传失败")){
+            }else if(errorMsg.contains("商品已存在")){
+                System.out.println("商品已存在，修改价格重新上传接口--------------------");
+                request.setPrice(NumUtils.randomAdjust(new BigDecimal(request.getPrice())).toString());
+                dataMap = JsonUtil.transferToObj(itemAdd(request), Map.class);
+                errorResponse = (Map) dataMap.get("errorResponse");
+
+//                if(errorResponse == null){
+//                    //上传成功，修改erp仓库价格
+//                    System.out.println("修改erp商品价格---------------");
+//                    Map editPriceMap = new HashMap();
+//                    editPriceMap.put("artNo",request.getItemSn());
+//                    editPriceMap.put("price",new BigDecimal(request.getPrice()).multiply(new BigDecimal(100)).setScale(0, RoundingMode.DOWN));
+//                    System.out.println("修改后的价格："+editPriceMap.get("price"));
+//                    InterfaceUtils.getInterfacePost("/zhishu/shopGoods/editShopGoodsPrice", editPriceMap);
+//                }
+            }
+
+            if(errorMsg.contains("图片上传失败")){
                 System.out.println("图片上传失败，重新调用上传接口--------------------");
+                try {
+                    System.out.println("线程停止2s-------------------");
+                    Thread.sleep(2000); // 1秒 = 1000毫秒
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 dataMap = JsonUtil.transferToObj(itemAdd(request), Map.class);
                 errorResponse = (Map) dataMap.get("errorResponse");
             }
@@ -383,7 +405,7 @@ public class GoodsServiceImpl implements GoodsService {
     }
 
     @Override
-    public void goodsAddMain(Map map, Map dataMap) {
+    public void  goodsAddMain(Map map, Map dataMap) {
 
         // 任务信息对象
         Map taskBo = (Map) map.get("taskBo");
@@ -476,6 +498,15 @@ public class GoodsServiceImpl implements GoodsService {
                          String userId) {
         // 标记是否是自动上传的商品
         String autoMark = map.get("mark") != null && StringUtils.isNotEmpty(map.get("mark").toString()) ? map.get("mark").toString() : "";
+        if(autoMark.equals("autoGoodsAdd")){
+            try {
+                System.out.println("线程停止10s-------------------");
+                Thread.sleep(10000); // 1秒 = 1000毫秒
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            System.out.println("线程继续执行-----------------");
+        }
         // 店铺详细设置数据
         Map shopDetailVo = (Map) map.get(shopVo.get("id") + "shopDetailVo");
         // 销售模板数据
@@ -625,6 +656,14 @@ public class GoodsServiceImpl implements GoodsService {
             kongfzAddGoodMap.put("itemName", getGoodTitle(shopDetailVo, bookBaseInfoVo));
             kongfzAddGoodMap.put("importantDesc", shopDetailVo.get("recommend"));
             /**
+             * 开本
+             */
+            kongfzAddGoodMap.put("pageSize", bookBaseInfoVo.get("format")+"开");
+            /**
+             * 字数
+             */
+            kongfzAddGoodMap.put("wordNum", bookBaseInfoVo.get("wordage"));
+            /**
              * 价格
              */
             String price = getPrice(shopDetailVo, bookBaseInfoVo, priceTemplateVo, logisticsListMap);
@@ -653,6 +692,10 @@ public class GoodsServiceImpl implements GoodsService {
              * 货号
              */
             kongfzAddGoodMap.put("itemSn", bookBaseInfoVo.get("artNo"));
+            /**
+             * 统一货号
+             */
+            kongfzAddGoodMap.put("unifiedIsbn", bookBaseInfoVo.get("unifiedIsbn"));
             /**
              * 图片
              */

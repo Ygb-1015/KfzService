@@ -123,6 +123,21 @@ public class GoodsItemAddRequest {
     private String oriPrice;
 
     /**
+     * 开本
+     */
+    private String pageSize;
+
+    /**
+     * 字数
+     */
+    private String wordNum;
+
+    /**
+     * 统一书号
+     */
+    private String unifiedIsbn;
+
+    /**
      * 用户填写名称
      */
     private String otherName;
@@ -326,5 +341,29 @@ public class GoodsItemAddRequest {
 
     public void setOtherName(String otherName) {
         this.otherName = otherName;
+    }
+
+    public String getPageSize() {
+        return pageSize;
+    }
+
+    public void setPageSize(String pageSize) {
+        this.pageSize = pageSize;
+    }
+
+    public String getWordNum() {
+        return wordNum;
+    }
+
+    public void setWordNum(String wordNum) {
+        this.wordNum = wordNum;
+    }
+
+    public String getUnifiedIsbn() {
+        return unifiedIsbn;
+    }
+
+    public void setUnifiedIsbn(String unifiedIsbn) {
+        this.unifiedIsbn = unifiedIsbn;
     }
 }

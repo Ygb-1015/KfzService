@@ -11,6 +11,7 @@ public final class UrlUtil {
 
     public static String getUrl(){
         return "/www/wwwroot/baseApi/file/";
+        //       return "D:/work/erp/file/";
     }
 
     /**
