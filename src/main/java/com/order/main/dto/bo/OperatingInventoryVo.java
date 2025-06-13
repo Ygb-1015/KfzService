@@ -25,6 +25,11 @@ public class OperatingInventoryVo {
     private Integer shopType;
 
     /**
+     * 三方平台订单编号
+     */
+    private String orderSn;
+
+    /**
      * 平台店铺Id
      */
     private Long mallId;

@@ -363,26 +363,67 @@ public class OrderServiceImpl implements OrderService {
                 // 封装操作库存失败商品信息
                 // 用于存放订单下未知来源异常商品
                 List<String> inventoryExceptionItemIds = new ArrayList<>();
+                // 库存操作
                 OperatingInventoryVo operatingInventoryVo = new OperatingInventoryVo();
-                // TODO 暂时只做新订单扣减库存操作
+                operatingInventoryVo.setShopType(2);
+                operatingInventoryVo.setMallId(shop.getMallId());
+                operatingInventoryVo.setOrderSn(order.getOrderId().toString());
                 // 查询旧订单看是否已存在
+                List<String> statusList = new ArrayList<>();
+                statusList.add(KfzOrderStatusEnum.PAID_REFUNDED.getCode());
+                statusList.add(KfzOrderStatusEnum.SHIPPED_REFUNDED.getCode());
+                statusList.add(KfzOrderStatusEnum.BUYER_CANCELLED_BEFORE_CONFIRM.getCode());
+                statusList.add(KfzOrderStatusEnum.BUYER_CANCELLED_BEFORE_PAY.getCode());
+                statusList.add(KfzOrderStatusEnum.SELLER_CANCELLED_BEFORE_CONFIRM.getCode());
+                statusList.add(KfzOrderStatusEnum.SELLER_CLOSED_BEFORE_PAY.getCode());
+                statusList.add(KfzOrderStatusEnum.ADMIN_CLOSED_BEFORE_CONFIRM.getCode());
+                statusList.add(KfzOrderStatusEnum.SELLER_CANCELLED_AFTER_PAY.getCode());
                 if (ObjectUtil.isNull(orderId)) {
-                    for (PageQueryOrdersResponse.Order.Item item : items) {
-                        try { // 默认拼多多店铺-1
-                            operatingInventoryVo.setShopType(2);
-                            // 扣减库存类型
-                            operatingInventoryVo.setOperationType(2);
-                            operatingInventoryVo.setMallId(shop.getMallId());
-                            OperatingInventoryVo.GoodsItem goodsItem = new OperatingInventoryVo.GoodsItem();
-                            goodsItem.setPlatformId(item.getItemId().toString());
-                            goodsItem.setCount(item.getNumber());
-                            operatingInventoryVo.setGoodsItems(List.of(goodsItem));
-                            erpClient.OperatingInventory(ClientConstantUtils.ERP_URL, operatingInventoryVo);
-                        } catch (Exception e) {
-                            log.error("收到孔夫子推送订单消息，操作库存失败：孔夫子订单-{},操作库存请求-{}，异常信息-{}", JSONObject.toJSONString(order), JSONObject.toJSONString(operatingInventoryVo), e.getMessage());
-                            inventoryExceptionItemIds.add(item.getItemId().toString());
+                    System.out.println("【INFO】第一次同步订单");
+                    if (!statusList.contains(order.getOrderStatus())){
+                        System.out.println("【INFO】第一次同步订单-非取消状态扣减库存");
+                        for (PageQueryOrdersResponse.Order.Item item : items) {
+                            try {
+
+                                // 扣减库存类型
+                                operatingInventoryVo.setOperationType(2);
+                                OperatingInventoryVo.GoodsItem goodsItem = new OperatingInventoryVo.GoodsItem();
+                                goodsItem.setPlatformId(item.getItemId().toString());
+                                goodsItem.setCount(item.getNumber());
+                                operatingInventoryVo.setGoodsItems(List.of(goodsItem));
+                                erpClient.OperatingInventory(ClientConstantUtils.ERP_URL, operatingInventoryVo);
+                            } catch (Exception e) {
+                                log.error("收到孔夫子推送订单消息，操作库存失败：孔夫子订单-{},操作库存请求-{}，异常信息-{}", JSONObject.toJSONString(order), JSONObject.toJSONString(operatingInventoryVo), e.getMessage());
+                                inventoryExceptionItemIds.add(item.getItemId().toString());
+                            }
                         }
                     }
+                    System.out.println("【INFO】第一次同步订单-取消状态不执行扣减库存");
+                } else {
+                    System.out.println("【INFO】非第一次同步订单");
+                    if (statusList.contains(order.getOrderStatus())){
+                        System.out.println("【INFO】非第一次同步订单-取消状态回滚库存");
+                        // 查询是否存在退货日志
+                        R<StockChangeLog> stockChangeLogR = erpClient.queryStockChangeLogByOrderSn(ClientConstantUtils.ERP_URL, order.getOrderId().toString(), 3);
+                        // 若不存在退货操作库存日志，则需要回退库存
+                        if (ObjectUtil.isNull(stockChangeLogR.getData())){
+                            for (PageQueryOrdersResponse.Order.Item item : items) {
+                                try {
+                                    // 增加库存类型
+                                    operatingInventoryVo.setOperationType(1);
+                                    OperatingInventoryVo.GoodsItem goodsItem = new OperatingInventoryVo.GoodsItem();
+                                    goodsItem.setPlatformId(item.getItemId().toString());
+                                    goodsItem.setCount(item.getNumber());
+                                    operatingInventoryVo.setGoodsItems(List.of(goodsItem));
+                                    erpClient.OperatingInventory(ClientConstantUtils.ERP_URL, operatingInventoryVo);
+                                } catch (Exception e) {
+                                    log.error("收到孔夫子推送订单消息，操作库存失败：孔夫子订单-{},操作库存请求-{}，异常信息-{}", JSONObject.toJSONString(order), JSONObject.toJSONString(operatingInventoryVo), e.getMessage());
+                                    inventoryExceptionItemIds.add(item.getItemId().toString());
+                                }
+                            }
+                        }
+                    }
+                    System.out.println("【INFO】非第一次同步订单-非取消状态不执行回滚库存");
                 }
                 ItemListVo.ExceptionItem inventoryExceptionItem = new ItemListVo.ExceptionItem();
                 inventoryExceptionItem.setOrderExceptionType(OrderExceptionTypeEnum.INVENTORY_EXCEPTION.getCode());

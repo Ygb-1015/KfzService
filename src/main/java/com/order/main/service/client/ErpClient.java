@@ -1,15 +1,14 @@
 package com.order.main.service.client;
 
 import com.dtflys.forest.annotation.*;
-import com.order.main.dto.bo.OperatingInventoryVo;
-import com.order.main.dto.bo.ShopGoodsPublishedVo;
-import com.order.main.dto.bo.TDistrictVo;
-import com.order.main.dto.bo.TShopOrderVo;
+import com.order.main.dto.R;
+import com.order.main.dto.bo.*;
 import com.order.main.dto.requst.GoodsComparisonRequest;
 import com.order.main.dto.requst.OrderListByShopIdRequest;
 import com.order.main.dto.requst.UpdateTokenRequest;
 import com.order.main.dto.response.ShopVo;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
@@ -48,6 +47,7 @@ public interface ErpClient {
 
     /**
      * 修改店铺订单更新时间
+     *
      * @param myURL
      * @param shopId
      * @param startUpdatedAt
@@ -82,10 +82,17 @@ public interface ErpClient {
 
     /**
      * 操作库存
+     *
      * @param myURL
      * @param operatingInventoryVo
      * @return
      */
     @Post(value = "{myURL}/zhishu/shopGoods/operatingInventory", dataType = "json", headers = {"Content-Type: application/json"})
     Boolean OperatingInventory(@Var("myURL") String myURL, @Body OperatingInventoryVo operatingInventoryVo);
+
+    /**
+     * 通过平台订单Id查询库存操作日志
+     */
+    @Get(value = "{baseUrl}/zhishu/shopGoods/queryStockChangeLogByOrderSn", dataType = "json")
+    R<StockChangeLog> queryStockChangeLogByOrderSn(@Var("myURL") String myURL, @Query("orderSn") String orderSn, @Query("type") Integer type);
 }

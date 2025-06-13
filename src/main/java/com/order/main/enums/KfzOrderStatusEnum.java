@@ -28,7 +28,7 @@ public enum KfzOrderStatusEnum {
 
     SHIPPED_REFUNDING("Shipped-Refunding", "发货后 - 申请退款中"),
 
-    SHIPPED_REFUND_REJECTED("Shipped-Shipped-RefundRejected", "发货后 - 拒绝退款中"),
+    SHIPPED_REFUND_REJECTED("Shipped-RefundRejected", "发货后 - 拒绝退款中"),
 
     SHIPPED_REFUNDED("ShippedRefunded", "发货后 - 已退款"),
 
@@ -73,5 +73,6 @@ public enum KfzOrderStatusEnum {
         }
         return orderStatusEnumList;
     }
+
 
 }

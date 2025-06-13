@@ -6,7 +6,6 @@ import com.order.main.dto.requst.OrderDeliveryRequest;
 import com.order.main.dto.response.LogisticsMethodResponse;
 import com.order.main.exception.ServiceException;
 import com.order.main.service.OrderService;
-import com.order.main.util.ImageUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
