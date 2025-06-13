@@ -59,26 +59,26 @@ public interface ErpClient {
     /**
      * 根据店铺Id查询商品列表
      */
-    @Get(value = "{baseUrl}/zhishu/shopGoodsPublished/getListByShopId", dataType = "json")
-    List<ShopGoodsPublishedVo> getListByShopId(@Var("baseUrl") String baseUrl, @Query("shopId") Long shopId);
+    @Get(value = "{myURL}/zhishu/shopGoodsPublished/getListByShopId", dataType = "json")
+    List<ShopGoodsPublishedVo> getListByShopId(@Var("myURL") String baseUrl, @Query("shopId") Long shopId);
 
     /**
      * 根据区划名称查询区划列表
      */
-    @Post(value = "{baseUrl}/district/queryListByName", dataType = "json", headers = {"Content-Type: application/json"})
-    List<TDistrictVo> queryListByName(@Var("baseUrl") String baseUrl, @Body List<String> districtNames);
+    @Post(value = "{myURL}/district/queryListByName", dataType = "json", headers = {"Content-Type: application/json"})
+    List<TDistrictVo> queryListByName(@Var("myURL") String baseUrl, @Body List<String> districtNames);
 
     /**
      * 根据店铺Id查询订单列表
      */
-    @Post(value = "{baseUrl}/zhishu/shopOrder/listByShopId", dataType = "json", headers = {"Content-Type: application/json"})
-    List<TShopOrderVo> listByShopId(@Var("baseUrl") String baseUrl, @Body OrderListByShopIdRequest request);
+    @Post(value = "{myURL}/zhishu/shopOrder/listByShopId", dataType = "json", headers = {"Content-Type: application/json"})
+    List<TShopOrderVo> listByShopId(@Var("myURL") String baseUrl, @Body OrderListByShopIdRequest request);
 
     /**
      * 批量插入/更新订单
      */
-    @Post(value = "{baseUrl}/zhishu/shopOrder/insertOrUpdateOrderBatch", headers = {"Content-Type: application/json"})
-    Boolean insertOrUpdateOrderBatch(@Var("baseUrl") String baseUrl, @Body List<TShopOrderVo> orderList);
+    @Post(value = "{myURL}/zhishu/shopOrder/insertOrUpdateOrderBatch", headers = {"Content-Type: application/json"})
+    Boolean insertOrUpdateOrderBatch(@Var("myURL") String baseUrl, @Body List<TShopOrderVo> orderList);
 
     /**
      * 操作库存
@@ -93,6 +93,6 @@ public interface ErpClient {
     /**
      * 通过平台订单Id查询库存操作日志
      */
-    @Get(value = "{baseUrl}/zhishu/shopGoods/queryStockChangeLogByOrderSn", dataType = "json")
+    @Get(value = "{myURL}/zhishu/shopGoods/queryStockChangeLogByOrderSn", dataType = "json")
     R<StockChangeLog> queryStockChangeLogByOrderSn(@Var("myURL") String myURL, @Query("orderSn") String orderSn, @Query("type") Integer type);
 }
