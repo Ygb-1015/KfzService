@@ -372,6 +372,7 @@ public class OrderServiceImpl implements OrderService {
                 List<String> statusList = new ArrayList<>();
                 statusList.add(KfzOrderStatusEnum.PAID_REFUNDED.getCode());
                 statusList.add(KfzOrderStatusEnum.SHIPPED_REFUNDED.getCode());
+                statusList.add(KfzOrderStatusEnum.SHIPPED_RETURNED.getCode());
                 statusList.add(KfzOrderStatusEnum.BUYER_CANCELLED_BEFORE_CONFIRM.getCode());
                 statusList.add(KfzOrderStatusEnum.BUYER_CANCELLED_BEFORE_PAY.getCode());
                 statusList.add(KfzOrderStatusEnum.SELLER_CANCELLED_BEFORE_CONFIRM.getCode());
@@ -379,9 +380,8 @@ public class OrderServiceImpl implements OrderService {
                 statusList.add(KfzOrderStatusEnum.ADMIN_CLOSED_BEFORE_CONFIRM.getCode());
                 statusList.add(KfzOrderStatusEnum.SELLER_CANCELLED_AFTER_PAY.getCode());
                 if (ObjectUtil.isNull(orderId)) {
-                    System.out.println("【INFO】第一次同步订单：" + order.getOrderStatus());
                     if (!statusList.contains(order.getOrderStatus())) {
-                        System.out.println("【INFO】第一次同步订单-非取消状态扣减库存：" + order.getOrderStatus());
+                        System.out.println("【INFO】第一次同步订单-非取消状态扣减库存：订单Id-" + order.getOrderId() + "订单状态：" + order.getOrderStatus());
                         for (PageQueryOrdersResponse.Order.Item item : items) {
                             try {
 
@@ -397,16 +397,16 @@ public class OrderServiceImpl implements OrderService {
                                 inventoryExceptionItemIds.add(item.getItemId().toString());
                             }
                         }
+                    } else {
+                        System.out.println("【INFO】第一次同步订单-取消状态不执行扣减库存：订单Id-" + order.getOrderId() + "订单状态：" + order.getOrderStatus());
                     }
-                    System.out.println("【INFO】第一次同步订单-取消状态不执行扣减库存：" + order.getOrderStatus());
                 } else {
-                    System.out.println("【INFO】非第一次同步订单：" + order.getOrderStatus());
                     if (statusList.contains(order.getOrderStatus())) {
-                        System.out.println("【INFO】非第一次同步订单-取消状态回滚库存：" + order.getOrderStatus());
                         // 查询是否存在退货日志
                         R<StockChangeLog> stockChangeLogR = erpClient.queryStockChangeLogByOrderSn(ClientConstantUtils.ERP_URL, order.getOrderId().toString(), 3);
                         // 若不存在退货操作库存日志，则需要回退库存
                         if (ObjectUtil.isNull(stockChangeLogR.getData())) {
+                            System.out.println("【INFO】非第一次同步订单-取消状态第一次回滚库存：订单Id-" + order.getOrderId() + "订单状态：" + order.getOrderStatus());
                             for (PageQueryOrdersResponse.Order.Item item : items) {
                                 try {
                                     // 增加库存类型
@@ -421,9 +421,12 @@ public class OrderServiceImpl implements OrderService {
                                     inventoryExceptionItemIds.add(item.getItemId().toString());
                                 }
                             }
+                        } else {
+                            System.out.println("【INFO】非第一次同步订单-取消状态非第一次不回滚库存：订单Id-" + order.getOrderId() + "订单状态：" + order.getOrderStatus());
                         }
+                    } else {
+                        System.out.println("【INFO】非第一次同步订单-非取消状态不执行回滚库存：" + order.getOrderStatus());
                     }
-                    System.out.println("【INFO】非第一次同步订单-非取消状态不执行回滚库存：" + order.getOrderStatus());
                 }
                 ItemListVo.ExceptionItem inventoryExceptionItem = new ItemListVo.ExceptionItem();
                 inventoryExceptionItem.setOrderExceptionType(OrderExceptionTypeEnum.INVENTORY_EXCEPTION.getCode());
