@@ -4,6 +4,7 @@ import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.order.main.dto.R;
 import com.order.main.dto.bo.*;
+import com.order.main.dto.requst.OperatingSoldOutRequest;
 import com.order.main.dto.requst.OrderListByShopIdRequest;
 import com.order.main.dto.response.*;
 import com.order.main.enums.*;
@@ -87,7 +88,7 @@ public class OrderServiceImpl implements OrderService {
                     // 启动定时任务
                     future = scheduler.scheduleAtFixedRate(renewLockTask, 0, INITIAL_DELAY_AND_PERIOD, TimeUnit.SECONDS);
 
-                    System.out.println("线程ID-" + Thread.currentThread().getId() + ":同步店铺订单-shopId");
+                    System.out.println("线程ID-" + Thread.currentThread().getId() + ":同步店铺订单-" + shopId);
                     // 根据shopId获取店铺信息
                     ShopVo shop = erpClient.getShopInfo(ClientConstantUtils.ERP_URL, shopId);
 
@@ -376,7 +377,6 @@ public class OrderServiceImpl implements OrderService {
                 statusList.add(KfzOrderStatusEnum.BUYER_CANCELLED_BEFORE_CONFIRM.getCode());
                 statusList.add(KfzOrderStatusEnum.BUYER_CANCELLED_BEFORE_PAY.getCode());
                 statusList.add(KfzOrderStatusEnum.SELLER_CANCELLED_BEFORE_CONFIRM.getCode());
-                statusList.add(KfzOrderStatusEnum.SELLER_CLOSED_BEFORE_PAY.getCode());
                 statusList.add(KfzOrderStatusEnum.ADMIN_CLOSED_BEFORE_CONFIRM.getCode());
                 statusList.add(KfzOrderStatusEnum.SELLER_CANCELLED_AFTER_PAY.getCode());
                 if (ObjectUtil.isNull(orderId)) {
@@ -424,8 +424,34 @@ public class OrderServiceImpl implements OrderService {
                         } else {
                             System.out.println("【INFO】非第一次同步订单-取消状态非第一次不回滚库存：订单Id-" + order.getOrderId() + "订单状态：" + order.getOrderStatus());
                         }
+                    } else if (KfzOrderStatusEnum.SELLER_CLOSED_BEFORE_PAY.getCode().equals(order.getOrderStatus())) {
+                        for (PageQueryOrdersResponse.Order.Item item : items) {
+                            // 查询商品发布记录判断是否已经处理过下架
+                            R<ShopGoodsPublishedLog> shopGoodsPublishedLogR = erpClient.queryPublishedLogByOrderSn(ClientConstantUtils.ERP_URL, item.getItemId().toString(), order.getOrderId().toString(), 2, 2, 2);
+                            // 若不存在记录则处理下架
+                            if (ObjectUtil.isNull(shopGoodsPublishedLogR.getData())) {
+                                System.out.println("【INFO】非第一次同步订单-取消状态第一次下架商品：订单Id-" + order.getOrderId() + "订单状态：" + order.getOrderStatus());
+                                try {
+                                    OperatingSoldOutRequest request = new OperatingSoldOutRequest();
+                                    request.setPlatformType(2);
+                                    request.setLogType(2);
+                                    request.setOperationType(2);
+                                    request.setMallId(shop.getMallId());
+                                    request.setOrderSn(order.getOrderId().toString());
+                                    OperatingSoldOutRequest.GoodsItem goodsItem = new OperatingSoldOutRequest.GoodsItem();
+                                    goodsItem.setPlatformId(item.getItemId().toString());
+                                    request.setGoodsItems(List.of(goodsItem));
+                                    erpClient.operatingSoldOut(ClientConstantUtils.ERP_URL, request);
+                                } catch (Exception e) {
+                                    log.error("收到孔夫子推送订单消息，操作下架失败：孔夫子订单-{},操作库存请求-{}，异常信息-{}", JSONObject.toJSONString(order), JSONObject.toJSONString(operatingInventoryVo), e.getMessage());
+                                    inventoryExceptionItemIds.add(item.getItemId().toString());
+                                }
+                            } else {
+                                System.out.println("【INFO】非第一次同步订单-取消状态非第一次不下架商品：订单Id-" + order.getOrderId() + "订单状态：" + order.getOrderStatus());
+                            }
+                        }
                     } else {
-                        System.out.println("【INFO】非第一次同步订单-非取消状态不执行回滚库存：" + order.getOrderStatus());
+                        System.out.println("【INFO】非第一次同步订单-非取消状态不执行回滚库存：订单Id-" + order.getOrderId() + "订单状态：" + order.getOrderStatus());
                     }
                 }
                 ItemListVo.ExceptionItem inventoryExceptionItem = new ItemListVo.ExceptionItem();

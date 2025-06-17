@@ -4,6 +4,7 @@ import com.dtflys.forest.annotation.*;
 import com.order.main.dto.R;
 import com.order.main.dto.bo.*;
 import com.order.main.dto.requst.GoodsComparisonRequest;
+import com.order.main.dto.requst.OperatingSoldOutRequest;
 import com.order.main.dto.requst.OrderListByShopIdRequest;
 import com.order.main.dto.requst.UpdateTokenRequest;
 import com.order.main.dto.response.ShopVo;
@@ -95,4 +96,25 @@ public interface ErpClient {
      */
     @Get(value = "{myURL}/zhishu/shopGoods/queryStockChangeLogByOrderSn", dataType = "json")
     R<StockChangeLog> queryStockChangeLogByOrderSn(@Var("myURL") String myURL, @Query("orderSn") String orderSn, @Query("type") Integer type);
+
+    /**
+     * 通过平台订单Id查询库存操作日志
+     */
+    @Get(value = "{myURL}/zhishu/shopGoodsPublishedLog/queryPublishedLogByOrderSn", dataType = "json")
+    R<ShopGoodsPublishedLog> queryPublishedLogByOrderSn(@Var("myURL") String myURL,
+                                                        @Query("platformId") String platformId,
+                                                        @Query("aboutId") String aboutId,
+                                                        @Query("platformType") Integer platformType,
+                                                        @Query("logType") Integer logType,
+                                                        @Query("operationType") Integer operationType);
+
+    /**
+     * 操作库存
+     *
+     * @param myURL
+     * @param request
+     * @return
+     */
+    @Post(value = "{myURL}/zhishu/shopGoods/operatingSoldOut", dataType = "json", headers = {"Content-Type: application/json"})
+    Boolean operatingSoldOut(@Var("myURL") String myURL, @Body OperatingSoldOutRequest request);
 }

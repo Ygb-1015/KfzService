@@ -114,11 +114,24 @@ public interface PhpClient {
     @Get(value = "{myURL}/delivery/methodList", dataType = "json")
     KfzBaseResponse<List<DeliveryMethodResponse>> deliveryMethodList(@Var("myURL") String myURL, @Query("token") String token);
 
-
+    /**
+     * 订单发货
+     *
+     * @param myURL
+     * @param token
+     * @param orderId
+     * @param shippingId
+     * @param shippingCom
+     * @param shipmentNum
+     * @param userDefined
+     * @param moreShipmentNum
+     * @return
+     */
     @Post(value = "{myURL}/order/deliver", dataType = "json")
     KfzBaseResponse<OrderDeliveryResponse> orderDelivery(@Var("myURL") String myURL, @Query("token") String token,
                                                          @Query("orderId") Long orderId, @Query("shippingId") String shippingId, @Query("shippingCom") String shippingCom,
                                                          @Query("shipmentNum") String shipmentNum, @Query("userDefined") String userDefined, @Query("moreShipmentNum") String moreShipmentNum);
 
-
+    @Post(value = "{myURL}/shop/itemDelisting", dataType = "json", headers = "Content-Type: multipart/form-data")
+    KfzBaseResponse<ItemDelistingResponse> itemDelisting(@Var("myURL") String myURL, @Body("token") String token, @Body("itemId") String itemId);
 }
