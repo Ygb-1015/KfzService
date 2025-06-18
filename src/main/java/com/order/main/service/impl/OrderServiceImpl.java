@@ -493,10 +493,8 @@ public class OrderServiceImpl implements OrderService {
         getShopGoodsListRequest.setPageSize(1);
         KfzBaseResponse<GetShopGoodsListResponse> shopGoodsResponse = phpClient.getShopGoodsList(ClientConstantUtils.PHP_URL, getShopGoodsListRequest);
         log.info("查询孔夫子店铺指定下架商品响应-{}", JSONObject.toJSONString(shopGoodsResponse));
-        if (ObjectUtil.isNotEmpty(shopGoodsResponse.getErrorResponse())) {
-            if (ObjectUtil.isNotEmpty(shopGoodsResponse.getSuccessResponse())) {
-                return shopGoodsResponse.getSuccessResponse().getTotal() <= 0;
-            }
+        if (ObjectUtil.isNotEmpty(shopGoodsResponse.getSuccessResponse())) {
+            return shopGoodsResponse.getSuccessResponse().getTotal() <= 0;
         }
         return true;
     }
