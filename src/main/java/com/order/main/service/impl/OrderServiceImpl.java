@@ -4,6 +4,7 @@ import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.order.main.dto.R;
 import com.order.main.dto.bo.*;
+import com.order.main.dto.requst.GetShopGoodsListRequest;
 import com.order.main.dto.requst.OperatingSoldOutRequest;
 import com.order.main.dto.requst.OrderListByShopIdRequest;
 import com.order.main.dto.response.*;
@@ -379,6 +380,7 @@ public class OrderServiceImpl implements OrderService {
                 statusList.add(KfzOrderStatusEnum.SELLER_CANCELLED_BEFORE_CONFIRM.getCode());
                 statusList.add(KfzOrderStatusEnum.ADMIN_CLOSED_BEFORE_CONFIRM.getCode());
                 statusList.add(KfzOrderStatusEnum.SELLER_CANCELLED_AFTER_PAY.getCode());
+                statusList.add(KfzOrderStatusEnum.SELLER_CLOSED_BEFORE_PAY.getCode());
                 if (ObjectUtil.isNull(orderId)) {
                     if (!statusList.contains(order.getOrderStatus())) {
                         System.out.println("【INFO】第一次同步订单-非取消状态扣减库存：订单Id-" + order.getOrderId() + "订单状态：" + order.getOrderStatus());
@@ -402,56 +404,55 @@ public class OrderServiceImpl implements OrderService {
                     }
                 } else {
                     if (statusList.contains(order.getOrderStatus())) {
-                        // 查询是否存在退货日志
-                        R<StockChangeLog> stockChangeLogR = erpClient.queryStockChangeLogByOrderSn(ClientConstantUtils.ERP_URL, order.getOrderId().toString(), 3);
-                        // 若不存在退货操作库存日志，则需要回退库存
-                        if (ObjectUtil.isNull(stockChangeLogR.getData())) {
-                            System.out.println("【INFO】非第一次同步订单-取消状态第一次回滚库存：订单Id-" + order.getOrderId() + "订单状态：" + order.getOrderStatus());
-                            for (PageQueryOrdersResponse.Order.Item item : items) {
-                                try {
-                                    // 增加库存类型
-                                    operatingInventoryVo.setOperationType(1);
-                                    OperatingInventoryVo.GoodsItem goodsItem = new OperatingInventoryVo.GoodsItem();
-                                    goodsItem.setPlatformId(item.getItemId().toString());
-                                    goodsItem.setCount(item.getNumber());
-                                    operatingInventoryVo.setGoodsItems(List.of(goodsItem));
-                                    erpClient.OperatingInventory(ClientConstantUtils.ERP_URL, operatingInventoryVo);
-                                } catch (Exception e) {
-                                    log.error("收到孔夫子推送订单消息，操作库存失败：孔夫子订单-{},操作库存请求-{}，异常信息-{}", JSONObject.toJSONString(order), JSONObject.toJSONString(operatingInventoryVo), e.getMessage());
-                                    inventoryExceptionItemIds.add(item.getItemId().toString());
-                                }
-                            }
-                        } else {
-                            System.out.println("【INFO】非第一次同步订单-取消状态非第一次不回滚库存：订单Id-" + order.getOrderId() + "订单状态：" + order.getOrderStatus());
-                        }
-                    } else if (KfzOrderStatusEnum.SELLER_CLOSED_BEFORE_PAY.getCode().equals(order.getOrderStatus())) {
                         for (PageQueryOrdersResponse.Order.Item item : items) {
+                            // 查询是否存在退货日志
+                            R<StockChangeLog> stockChangeLogR = erpClient.queryStockChangeLogByOrderSn(ClientConstantUtils.ERP_URL, order.getOrderId().toString(), 3);
                             // 查询商品发布记录判断是否已经处理过下架
                             R<ShopGoodsPublishedLog> shopGoodsPublishedLogR = erpClient.queryPublishedLogByOrderSn(ClientConstantUtils.ERP_URL, item.getItemId().toString(), order.getOrderId().toString(), 2, 2, 2);
-                            // 若不存在记录则处理下架
-                            if (ObjectUtil.isNull(shopGoodsPublishedLogR.getData())) {
-                                System.out.println("【INFO】非第一次同步订单-取消状态第一次下架商品：订单Id-" + order.getOrderId() + "订单状态：" + order.getOrderStatus());
-                                try {
-                                    OperatingSoldOutRequest request = new OperatingSoldOutRequest();
-                                    request.setPlatformType(2);
-                                    request.setLogType(2);
-                                    request.setOperationType(2);
-                                    request.setMallId(shop.getMallId());
-                                    request.setOrderSn(order.getOrderId().toString());
-                                    OperatingSoldOutRequest.GoodsItem goodsItem = new OperatingSoldOutRequest.GoodsItem();
-                                    goodsItem.setPlatformId(item.getItemId().toString());
-                                    request.setGoodsItems(List.of(goodsItem));
-                                    erpClient.operatingSoldOut(ClientConstantUtils.ERP_URL, request);
-                                } catch (Exception e) {
-                                    log.error("收到孔夫子推送订单消息，操作下架失败：孔夫子订单-{},操作库存请求-{}，异常信息-{}", JSONObject.toJSONString(order), JSONObject.toJSONString(operatingInventoryVo), e.getMessage());
-                                    inventoryExceptionItemIds.add(item.getItemId().toString());
+                            if (ObjectUtil.isNull(stockChangeLogR.getData()) && ObjectUtil.isNull(shopGoodsPublishedLogR.getData())) {
+                                // 若退货日志或下架日志都不存在，说明是第一次
+                                // 查询商品是否是上架状态
+                                Boolean isOnSale = checkGoodsIsOnSale(token, item.getItemId());
+                                if (isOnSale) {
+                                    // 若商品没被下架，则执行回退库存相关逻辑
+                                    System.out.println("【INFO】非第一次同步订单-取消状态第一次回滚库存：订单Id-" + order.getOrderId() + "订单状态：" + order.getOrderStatus());
+                                    try {
+                                        // 增加库存类型
+                                        operatingInventoryVo.setOperationType(1);
+                                        OperatingInventoryVo.GoodsItem goodsItem = new OperatingInventoryVo.GoodsItem();
+                                        goodsItem.setPlatformId(item.getItemId().toString());
+                                        goodsItem.setCount(item.getNumber());
+                                        operatingInventoryVo.setGoodsItems(List.of(goodsItem));
+                                        erpClient.OperatingInventory(ClientConstantUtils.ERP_URL, operatingInventoryVo);
+                                    } catch (Exception e) {
+                                        log.error("收到孔夫子推送订单消息，操作库存失败：孔夫子订单-{},操作库存请求-{}，异常信息-{}", JSONObject.toJSONString(order), JSONObject.toJSONString(operatingInventoryVo), e.getMessage());
+                                        inventoryExceptionItemIds.add(item.getItemId().toString());
+                                    }
+                                } else {
+                                    // 若商品被下架，则进行下架处理
+                                    System.out.println("【INFO】非第一次同步订单-取消状态第一次下架商品：订单Id-" + order.getOrderId() + "订单状态：" + order.getOrderStatus());
+                                    try {
+                                        OperatingSoldOutRequest request = new OperatingSoldOutRequest();
+                                        request.setPlatformType(2);
+                                        request.setLogType(2);
+                                        request.setOperationType(2);
+                                        request.setMallId(shop.getMallId());
+                                        request.setOrderSn(order.getOrderId().toString());
+                                        OperatingSoldOutRequest.GoodsItem goodsItem = new OperatingSoldOutRequest.GoodsItem();
+                                        goodsItem.setPlatformId(item.getItemId().toString());
+                                        request.setGoodsItems(List.of(goodsItem));
+                                        erpClient.operatingSoldOut(ClientConstantUtils.ERP_URL, request);
+                                    } catch (Exception e) {
+                                        log.error("收到孔夫子推送订单消息，操作下架失败：孔夫子订单-{},操作库存请求-{}，异常信息-{}", JSONObject.toJSONString(order), JSONObject.toJSONString(operatingInventoryVo), e.getMessage());
+                                        inventoryExceptionItemIds.add(item.getItemId().toString());
+                                    }
                                 }
                             } else {
-                                System.out.println("【INFO】非第一次同步订单-取消状态非第一次不下架商品：订单Id-" + order.getOrderId() + "订单状态：" + order.getOrderStatus());
+                                System.out.println("【INFO】非第一次同步订单-取消状态非第一次不处理：订单Id-" + order.getOrderId() + "订单状态：" + order.getOrderStatus());
                             }
                         }
                     } else {
-                        System.out.println("【INFO】非第一次同步订单-非取消状态不执行回滚库存：订单Id-" + order.getOrderId() + "订单状态：" + order.getOrderStatus());
+                        System.out.println("【INFO】非第一次同步订单-非取消状态不处理：订单Id-" + order.getOrderId() + "订单状态：" + order.getOrderStatus());
                     }
                 }
                 ItemListVo.ExceptionItem inventoryExceptionItem = new ItemListVo.ExceptionItem();
@@ -479,6 +480,25 @@ public class OrderServiceImpl implements OrderService {
         }
         // 更新最后同步时间
         erpClient.updateTime(ClientConstantUtils.ERP_URL, shop.getId(), now.toEpochMilli());
+    }
+
+    // 校验商品是否上架
+    public Boolean checkGoodsIsOnSale(String token, Long itemId) {
+        // 构建查询店铺商品请求参数
+        GetShopGoodsListRequest getShopGoodsListRequest = new GetShopGoodsListRequest();
+        getShopGoodsListRequest.setToken(token);
+        getShopGoodsListRequest.setType("delisting");
+        getShopGoodsListRequest.setItemId(itemId);
+        getShopGoodsListRequest.setPageNum(1);
+        getShopGoodsListRequest.setPageSize(1);
+        KfzBaseResponse<GetShopGoodsListResponse> shopGoodsResponse = phpClient.getShopGoodsList(ClientConstantUtils.PHP_URL, getShopGoodsListRequest);
+        log.info("查询孔夫子店铺指定下架商品响应-{}", JSONObject.toJSONString(shopGoodsResponse));
+        if (ObjectUtil.isNotEmpty(shopGoodsResponse.getErrorResponse())) {
+            if (ObjectUtil.isNotEmpty(shopGoodsResponse.getSuccessResponse())) {
+                return shopGoodsResponse.getSuccessResponse().getTotal() <= 0;
+            }
+        }
+        return true;
     }
 
 
