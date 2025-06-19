@@ -326,6 +326,7 @@ public class GoodsServiceImpl implements GoodsService {
                     errorMsg = errorMsg + ";" + value;
                 }
             }
+
             if(errorMsg.contains("品相必须为")){
                 System.out.println("品相审核失败，设置为九五品，重新调用上传接口-------------------");
                 request.setQuality("95");
@@ -337,15 +338,24 @@ public class GoodsServiceImpl implements GoodsService {
                 dataMap = JsonUtil.transferToObj(itemAdd(request), Map.class);
                 errorResponse = (Map) dataMap.get("errorResponse");
 
-//                if(errorResponse == null){
-//                    //上传成功，修改erp仓库价格
-//                    System.out.println("修改erp商品价格---------------");
-//                    Map editPriceMap = new HashMap();
-//                    editPriceMap.put("artNo",request.getItemSn());
-//                    editPriceMap.put("price",new BigDecimal(request.getPrice()).multiply(new BigDecimal(100)).setScale(0, RoundingMode.DOWN));
-//                    System.out.println("修改后的价格："+editPriceMap.get("price"));
-//                    InterfaceUtils.getInterfacePost("/zhishu/shopGoods/editShopGoodsPrice", editPriceMap);
-//                }
+                if(errorResponse == null){
+                    //上传成功，修改erp仓库价格
+                    System.out.println("修改erp商品价格---------------");
+                    Map editPriceMap = new HashMap();
+                    editPriceMap.put("artNo",request.getItemSn());
+                    editPriceMap.put("price",new BigDecimal(request.getPrice()).multiply(new BigDecimal(100)).setScale(0, RoundingMode.DOWN));
+                    System.out.println("修改后的价格："+editPriceMap.get("price"));
+                    InterfaceUtils.getInterfacePost("/zhishu/shopGoods/editShopGoodsPrice", editPriceMap);
+                }
+            }
+
+            if (errorResponse != null && errorResponse.get("data") != null) {
+                Map data = (Map) errorResponse.get("data");
+                Collection<String> values = data.values();
+                for (String value : values) {
+                    System.out.println(value);
+                    errorMsg = errorMsg + ";" + value;
+                }
             }
 
             if(errorMsg.contains("图片上传失败")){
@@ -486,7 +496,7 @@ public class GoodsServiceImpl implements GoodsService {
      * @param whiteStr           用户自定义白名单
      * @param blackStr           用户自定义黑名单
      */
-    public void goodsAdd(Map shopVo,
+    public synchronized void goodsAdd(Map shopVo,
                          List<Map> bookBaseInfoVoList,
                          String filePath,
                          String taskId,
