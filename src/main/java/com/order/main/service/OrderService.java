@@ -7,7 +7,7 @@ import java.util.List;
 
 public interface OrderService {
 
-    void fullSynchronizationOrder(Integer days,List<Long> shopIdList);
+    void fullSynchronizationOrder(Integer days, String type,List<Long> shopIdList);
 
     List<LogisticsMethodResponse> deliveryMethodList(Long shopId);
 

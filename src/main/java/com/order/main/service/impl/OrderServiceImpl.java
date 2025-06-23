@@ -61,7 +61,7 @@ public class OrderServiceImpl implements OrderService {
     private static final int INITIAL_DELAY_AND_PERIOD = 30;
 
     @Override
-    public void fullSynchronizationOrder(Integer days, List<Long> shopIdList) {
+    public void fullSynchronizationOrder(Integer days, String type, List<Long> shopIdList) {
         if (ObjectUtil.isEmpty(shopIdList)) {
             System.err.println("店铺ID为空");
             return;
@@ -108,6 +108,9 @@ public class OrderServiceImpl implements OrderService {
                         log.error("同步店铺订单失败，shopId: {}", shopId, e);
                         // 抛出异常
                         throw new ServiceException("同步订单失败: " + e.getMessage());
+                    }
+                    if (type.equals("manual")) {
+                        erpClient.updateShopIsSynOrder(ClientConstantUtils.ERP_URL, shopId, 1);
                     }
                 } catch (Exception e) {
                     // 捕获其他未知异常

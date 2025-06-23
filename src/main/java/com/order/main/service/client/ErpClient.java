@@ -117,4 +117,15 @@ public interface ErpClient {
      */
     @Post(value = "{myURL}/zhishu/shopGoods/operatingSoldOut", dataType = "json", headers = {"Content-Type: application/json"})
     Boolean operatingSoldOut(@Var("myURL") String myURL, @Body OperatingSoldOutRequest request);
+
+    /**
+     * 修改店铺是否同步订单
+     *
+     * @param myURL
+     * @param shopId
+     * @param status
+     * @return
+     */
+    @Put(value = "{myURL}/zhishu/shop/updateShopIsSynOrder", dataType = "json")
+    R<Boolean> updateShopIsSynOrder(@Var("myURL") String myURL, @Query("shopId") Long shopId, @Query("status") int status);
 }

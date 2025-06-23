@@ -23,8 +23,8 @@ public class OrderController {
      * 同步近30天历史存量订单
      */
     @PostMapping("/fullSynchronizationOrder")
-    public String fullSynchronizationOrder(Integer days, @RequestBody List<Long> shopIdList) {
-        orderService.fullSynchronizationOrder(days, shopIdList);
+    public String fullSynchronizationOrder(Integer days, String type, @RequestBody List<Long> shopIdList) {
+        orderService.fullSynchronizationOrder(days, type, shopIdList);
         return "susses";
     }
 
