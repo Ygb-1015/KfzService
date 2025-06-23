@@ -61,7 +61,7 @@ public class OrderServiceImpl implements OrderService {
     private static final int INITIAL_DELAY_AND_PERIOD = 30;
 
     @Override
-    public void fullSynchronizationOrder(List<Long> shopIdList) {
+    public void fullSynchronizationOrder(Integer days, List<Long> shopIdList) {
         if (ObjectUtil.isEmpty(shopIdList)) {
             System.err.println("店铺ID为空");
             return;
@@ -102,7 +102,7 @@ public class OrderServiceImpl implements OrderService {
                     }
                     try {
                         // 调用孔夫子增量订单接口
-                        synOrder(shop);
+                        synOrder(days, shop);
                     } catch (Exception e) {
                         // 记录错误日志
                         log.error("同步店铺订单失败，shopId: {}", shopId, e);
@@ -130,11 +130,7 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
-    private void synOrder(ShopVo shop) throws Exception {
-
-        // 查询erp店铺全部商品
-        List<ShopGoodsPublishedVo> shopGoodsList = erpClient.getListByShopId(ClientConstantUtils.ERP_URL, shop.getId());
-        List<String> shopGoodsIdList = shopGoodsList.stream().map(ShopGoodsPublishedVo::getPlatformId).collect(Collectors.toList());
+    private void synOrder(Integer days, ShopVo shop) throws Exception {
 
         // 定义一个集合用来存储返回的订单数据
         List<PageQueryOrdersResponse.Order> allOrderList = new ArrayList<>();
@@ -169,11 +165,12 @@ public class OrderServiceImpl implements OrderService {
             // 使用定义的格式化器格式化LocalDateTime对象为字符串
             startUpdateTime = localDateTime.format(formatter);
         } else {
+            if (ObjectUtil.isNull(days)) throw new ServiceException("查询历史时间节点不能为空-店铺Id：" + shop.getId());
             // 是第一次同步默认查询近一个月的
             // 获取今天0时时间戳
             Instant today = ZonedDateTime.of(LocalDate.now(), LocalTime.MIDNIGHT, ZoneId.systemDefault()).toInstant();
             // 默认从九十天前的数据开始更新
-            Instant startInstant = today.minus(Duration.ofDays(30));
+            Instant startInstant = today.minus(Duration.ofDays(days));
             // 将Instant对象转换为LocalDateTime对象，并设置时区为系统默认时区
             LocalDateTime localDateTime = LocalDateTime.ofInstant(startInstant, ZoneId.systemDefault());
             // 定义日期时间格式
@@ -230,9 +227,19 @@ public class OrderServiceImpl implements OrderService {
 
         // 若订单列表不为空
         if (ObjectUtil.isNotEmpty(allOrderList)) {
+
             List<TShopOrderVo> realOrderList = new ArrayList<>();
             // 根据商品Id过滤订单列表
             for (PageQueryOrdersResponse.Order order : allOrderList) {
+
+                List<String> platformIdList = order.getItems().stream().map(item ->
+                        item.getItemId().toString()
+                ).collect(Collectors.toList());
+
+                // 查询erp店铺全部商品
+                List<ShopGoodsPublishedVo> shopGoodsList = erpClient.getListByShopId(ClientConstantUtils.ERP_URL, shop.getId(), platformIdList);
+                List<String> shopGoodsIdList = shopGoodsList.stream().map(ShopGoodsPublishedVo::getPlatformId).collect(Collectors.toList());
+
                 // 商品信息存储实体
                 ItemListVo<PageQueryOrdersResponse.Order.Item> realItemList = new ItemListVo<>();
                 // 用于存放订单下未知来源异常商品

@@ -60,8 +60,8 @@ public interface ErpClient {
     /**
      * 根据店铺Id查询商品列表
      */
-    @Get(value = "{myURL}/zhishu/shopGoodsPublished/getListByShopId", dataType = "json")
-    List<ShopGoodsPublishedVo> getListByShopId(@Var("myURL") String baseUrl, @Query("shopId") Long shopId);
+    @Post(value = "{myURL}/zhishu/shopGoodsPublished/getListByShopId", dataType = "json", headers = {"Content-Type: application/json"})
+    List<ShopGoodsPublishedVo> getListByShopId(@Var("myURL") String baseUrl, @Query("shopId") Long shopId, @Body List<String> platformId);
 
     /**
      * 根据区划名称查询区划列表
