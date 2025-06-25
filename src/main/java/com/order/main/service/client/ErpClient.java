@@ -3,15 +3,9 @@ package com.order.main.service.client;
 import com.dtflys.forest.annotation.*;
 import com.order.main.dto.R;
 import com.order.main.dto.bo.*;
-import com.order.main.dto.requst.GoodsComparisonRequest;
-import com.order.main.dto.requst.OperatingSoldOutRequest;
-import com.order.main.dto.requst.OrderListByShopIdRequest;
-import com.order.main.dto.requst.UpdateTokenRequest;
+import com.order.main.dto.requst.*;
 import com.order.main.dto.response.ShopVo;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.List;
 
@@ -45,6 +39,14 @@ public interface ErpClient {
      */
     @Post(value = "{myURL}/zhishu/shopGoods/goodsComparison", dataType = "json", headers = {"Content-Type: application/json"})
     Boolean goodsComparison(@Var("myURL") String myURL, @Body GoodsComparisonRequest request);
+
+    /**
+     * 商品比对(分批)
+     *
+     * @param request
+     */
+    @Post(value = "{myURL}/zhishu/shopGoods/batchGoodsComparison", dataType = "json", headers = {"Content-Type: application/json"})
+    Boolean batchGoodsComparison(@Var("myURL") String myURL, @Body BatchGoodsRequest request);
 
     /**
      * 修改店铺订单更新时间

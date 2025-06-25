@@ -15,6 +15,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -54,52 +55,135 @@ public class GoodsServiceImpl implements GoodsService {
     @Autowired
     private RedisUtils redisUtils;
 
-
     @Override
     public Boolean synchronizationGoods(Long shopId) {
         // 根据店铺Id查询店铺信息
         ShopVo shopInfo = erpClient.getShopInfo(ClientConstantUtils.ERP_URL, shopId);
         Assert.isTrue(ObjectUtil.isNotEmpty(shopInfo), "查询不到店铺信息");
+
         // 获取当前时间
         LocalDateTime now = LocalDateTime.now();
-        // 定义格式：YYYY-MM-DD HH:mm:ss
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        // 格式化当前时间
         String currentDateTime = now.format(formatter);
+
         // 从Redis中获取上次同步时间
         String lastGoodsSynTime = (String) redisUtils.getCacheObject("lastGoodsSynTime_" + shopInfo.getId());
+
         ThreadPoolUtils.execute(() -> {
-            List<GetShopGoodsListResponse.ShopGoods> shopGoodsList = queryShopGoods(shopInfo.getToken(), shopInfo.getRefreshToken(), shopId, lastGoodsSynTime);
-            List<ZhishuShopGoodsRequest> zhishuShopGoodsRequestList = shopGoodsList.stream().map(shopGoods -> {
-                ZhishuShopGoodsRequest zhishuShopGoodsRequest = new ZhishuShopGoodsRequest();
-                zhishuShopGoodsRequest.setUserId(shopInfo.getCreateBy().toString());
-                zhishuShopGoodsRequest.setProductId(shopGoods.getItemId().toString());
-                zhishuShopGoodsRequest.setGoodsName(shopGoods.getItemName());
-                zhishuShopGoodsRequest.setIsbn(shopGoods.getIsbn());
-                zhishuShopGoodsRequest.setArtNo(shopGoods.getItemSn());
-                zhishuShopGoodsRequest.setStock(0L);
-                zhishuShopGoodsRequest.setPrice(shopGoods.getPrice());
-                zhishuShopGoodsRequest.setConditionCode(shopGoods.getQuality());
-                zhishuShopGoodsRequest.setCreateBy(shopInfo.getCreateBy());
-                zhishuShopGoodsRequest.setItemNumber(shopGoods.getItemId().toString());
-                zhishuShopGoodsRequest.setItemNumber(shopGoods.getItemId().toString());
-                zhishuShopGoodsRequest.setFixPrice(shopGoods.getOriPrice());
-                zhishuShopGoodsRequest.setInventory(shopGoods.getNumber());
-                String imgUrl = shopGoods.getImgUrl();
-                if (ObjectUtil.isNotEmpty(shopGoods.getImgUrl())) imgUrl = ImageUtils.modifyUrl(imgUrl);
-                zhishuShopGoodsRequest.setBookPic("https://www0.kfzimg.com/" + imgUrl);
-                // zhishuShopGoodsBo.setIsArtNoConversion(1);
-                return zhishuShopGoodsRequest;
-            }).collect(Collectors.toList());
-            GoodsComparisonRequest request = new GoodsComparisonRequest();
-            request.setShopId(shopId);
-            request.setUserId(shopInfo.getCreateBy());
-            request.setZhishuShopGoodsRequestList(zhishuShopGoodsRequestList);
-            request.setCurrentDateTime(currentDateTime);
-            erpClient.goodsComparison(ClientConstantUtils.ERP_URL, request);
+            // 分批参数
+            int pageSize = 500; // 每批查询500条
+            int currentBatch = 0;
+            boolean hasMoreData = true;
+
+            // 初始化分批查询参数
+            String token = shopInfo.getToken();
+            String refreshToken = shopInfo.getRefreshToken();
+            boolean isRefreshToken = false;
+
+            while (hasMoreData) {
+                currentBatch++;
+                try {
+                    // 1. 分批查询商品数据
+                    GetShopGoodsListRequest request = new GetShopGoodsListRequest();
+                    request.setToken(token);
+                    request.setPageNum(currentBatch);
+                    request.setPageSize(pageSize);
+                    if (ObjectUtil.isNotNull(lastGoodsSynTime)) {
+                        request.setAddTimeBegin(lastGoodsSynTime);
+                    }
+
+                    KfzBaseResponse<GetShopGoodsListResponse> response = phpClient.getShopGoodsList(
+                            ClientConstantUtils.PHP_URL,
+                            request
+                    );
+
+                    // 处理token过期情况
+                    if (!isRefreshToken && ObjectUtil.isNotEmpty(response.getErrorResponse())) {
+                        List<Long> tokenErrorCode = Arrays.asList(1000L, 1001L, 2000L, 2001L);
+                        if (tokenErrorCode.contains(response.getErrorResponse().getCode())) {
+                            token = tokenUtils.refreshToken(refreshToken, shopId);
+                            isRefreshToken = true;
+                            continue; // 重新尝试当前批次
+                        } else {
+                            throw new RuntimeException("查询孔夫子店铺商品异常: " +
+                                    JSONObject.toJSONString(response));
+                        }
+                    }
+
+                    // 检查是否有数据
+                    if (ObjectUtil.isEmpty(response.getSuccessResponse()) ||
+                            ObjectUtil.isEmpty(response.getSuccessResponse().getList())) {
+                        hasMoreData = false;
+                        break;
+                    }
+
+                    List<GetShopGoodsListResponse.ShopGoods> batchData =
+                            response.getSuccessResponse().getList();
+
+                    // 2. 转换并处理当前批次数据
+                    List<ZhishuShopGoodsRequest> batchRequests = batchData.stream()
+                            .map(shopGoods -> convertToRequest(shopGoods, shopInfo))
+                            .collect(Collectors.toList());
+
+                    // 在B程序的synchronizationGoods方法中，获取总页数后：
+                    int totalBatches = response.getSuccessResponse().getPages();
+
+                    // 3. 构建并发送分批请求
+                    BatchGoodsRequest batchRequest = new BatchGoodsRequest();
+                    batchRequest.setShopId(shopId);
+                    batchRequest.setUserId(shopInfo.getCreateBy());
+                    batchRequest.setBatchData(batchRequests);
+                    batchRequest.setCurrentDateTime(currentDateTime);
+                    batchRequest.setBatchNo(currentBatch);
+                    batchRequest.setTotalBatches(totalBatches);
+                    batchRequest.setIsLastBatch(currentBatch == totalBatches);
+
+                    erpClient.batchGoodsComparison(ClientConstantUtils.ERP_URL, batchRequest);
+
+                    // 4. 控制处理速度
+                    if (!batchRequest.getIsLastBatch()) {
+                        Thread.sleep(200); // 批次间短暂休眠
+                    }
+
+                    // 检查是否还有更多数据
+                    if (response.getSuccessResponse().getPages() <= currentBatch) {
+                        hasMoreData = false;
+                    }
+
+                } catch (Exception e) {
+                    log.error("处理第{}批数据时发生异常: {}", currentBatch, e.getMessage(), e);
+                    hasMoreData = false; // 发生异常时终止处理
+                    throw new RuntimeException("分批处理商品数据异常: " + e.getMessage(), e);
+                }
+            }
         });
 
         return true;
+    }
+
+    // 转换方法提取为独立方法
+    private ZhishuShopGoodsRequest convertToRequest(GetShopGoodsListResponse.ShopGoods shopGoods, ShopVo shopInfo) {
+        ZhishuShopGoodsRequest request = new ZhishuShopGoodsRequest();
+        request.setUserId(shopInfo.getCreateBy().toString());
+        request.setProductId(shopGoods.getItemId().toString());
+        request.setGoodsName(shopGoods.getItemName());
+        request.setIsbn(shopGoods.getIsbn());
+        request.setArtNo(shopGoods.getItemSn());
+        request.setStock(0L);
+        request.setPrice(shopGoods.getPrice());
+        request.setConditionCode(shopGoods.getQuality());
+        request.setCreateBy(shopInfo.getCreateBy());
+        request.setItemNumber(shopGoods.getItemId().toString());
+        request.setFixPrice(shopGoods.getOriPrice());
+        request.setInventory(shopGoods.getNumber());
+
+        String imgUrl = shopGoods.getImgUrl();
+        if (ObjectUtil.isNotEmpty(shopGoods.getImgUrl())) {
+            imgUrl = ImageUtils.modifyUrl(imgUrl);
+        }
+        request.setBookPic("https://www0.kfzimg.com/" + imgUrl);
+
+        return request;
     }
 
     public List<GetShopGoodsListResponse.ShopGoods> queryShopGoods(String token, String refreshToken, Long shopId, String lastGoodsSynTime) {

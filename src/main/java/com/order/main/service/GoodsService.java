@@ -2,7 +2,6 @@ package com.order.main.service;
 
 import com.order.main.dto.requst.GoodsItemAddRequest;
 import com.order.main.dto.requst.UpdateArtNoRequest;
-import com.order.main.dto.response.GetShopInfoResponse;
 
 import java.util.Map;
 
