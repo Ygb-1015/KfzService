@@ -109,13 +109,14 @@ public class OrderServiceImpl implements OrderService {
                         // 抛出异常
                         throw new ServiceException("同步订单失败: " + e.getMessage());
                     }
-                    if (type.equals("manual")) {
-                        erpClient.updateShopIsSynOrder(ClientConstantUtils.ERP_URL, shopId, 1);
-                    }
                 } catch (Exception e) {
                     // 捕获其他未知异常
                     log.error("同步店铺订单失败，shopId: {}", shopId, e);
                 } finally {
+                    if (type.equals("manual")) {
+                        erpClient.updateShopIsSynOrder(ClientConstantUtils.ERP_URL, shopId, 1);
+                        erpClient.syncKfzHistoryOrderCallBack(ClientConstantUtils.ERP_URL, shopId);
+                    }
                     // 取消定时任务
                     if (future != null) {
                         future.cancel(false);
@@ -399,7 +400,6 @@ public class OrderServiceImpl implements OrderService {
                             System.out.println("【INFO】第一次同步订单-非取消状态扣减库存：订单Id-" + order.getOrderId() + "订单状态：" + order.getOrderStatus());
                             for (PageQueryOrdersResponse.Order.Item item : items) {
                                 try {
-
                                     // 扣减库存类型
                                     operatingInventoryVo.setOperationType(2);
                                     OperatingInventoryVo.GoodsItem goodsItem = new OperatingInventoryVo.GoodsItem();

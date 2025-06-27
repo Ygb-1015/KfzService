@@ -6,6 +6,7 @@ import com.order.main.dto.bo.*;
 import com.order.main.dto.requst.*;
 import com.order.main.dto.response.ShopVo;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
@@ -130,4 +131,7 @@ public interface ErpClient {
      */
     @Put(value = "{myURL}/zhishu/shop/updateShopIsSynOrder", dataType = "json")
     R<Boolean> updateShopIsSynOrder(@Var("myURL") String myURL, @Query("shopId") Long shopId, @Query("status") int status);
+
+    @Get(value = "{myURL}/zhishu/shopOrder/syncKfzHistoryOrderCallBack")
+    R<Boolean> syncKfzHistoryOrderCallBack(@Var("myURL") String myURL, @Query("shopId") Long shopId);
 }
