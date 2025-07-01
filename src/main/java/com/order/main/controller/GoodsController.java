@@ -16,6 +16,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.constraints.NotNull;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -160,6 +162,24 @@ public class GoodsController {
         KfzBaseResponse<ItemDelistingResponse> itemDelistingResponseKfzBaseResponse = phpClient.itemDelisting(ClientConstantUtils.PHP_URL, request.getToken(), request.getItemId());
         if (ObjectUtil.isNotEmpty(itemDelistingResponseKfzBaseResponse.getErrorResponse())) {
             return R.fail(itemDelistingResponseKfzBaseResponse.getErrorResponse().getSubMsg(), false);
+        }
+        return R.ok(true);
+    }
+
+    /**
+     * 合并核价Excel文件
+     *
+     * @param sourceDirectory 要合并的文件目录
+     * @param outputPath      最终导出路径
+     * @return
+     */
+    @PostMapping("/verifyPriceExcelMerger")
+    public R<Boolean> verifyPriceExcelMerger(@NotNull(message = "要合并的文件目录不能为空") @RequestParam("sourceDirectory") String sourceDirectory, @NotNull(message = "最终导出路径不能为空") @RequestParam("outputPath") String outputPath) {
+        try {
+            VerifyPriceExcelMerger.mergeExcelFiles(sourceDirectory, outputPath);
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.err.println("合并Excel文件时出错: " + e.getMessage());
         }
         return R.ok(true);
     }

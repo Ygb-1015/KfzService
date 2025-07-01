@@ -394,7 +394,7 @@ public class OrderServiceImpl implements OrderService {
                 statusList.add(KfzOrderStatusEnum.SELLER_CLOSED_BEFORE_PAY.getCode());
                 if (ObjectUtil.isNull(orderId)) {
                     if (!statusList.contains(order.getOrderStatus())) {
-                        // 查询是否存在退货日志
+                        // 查询是否存在扣减库存的日志
                         R<StockChangeLog> stockChangeLogR = erpClient.queryStockChangeLogByOrderSn(ClientConstantUtils.ERP_URL, order.getOrderId().toString(), 2);
                         if (ObjectUtil.isNull(stockChangeLogR.getData())) {
                             System.out.println("【INFO】第一次同步订单-非取消状态扣减库存：订单Id-" + order.getOrderId() + "订单状态：" + order.getOrderStatus());

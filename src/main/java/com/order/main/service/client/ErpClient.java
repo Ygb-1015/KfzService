@@ -132,6 +132,13 @@ public interface ErpClient {
     @Put(value = "{myURL}/zhishu/shop/updateShopIsSynOrder", dataType = "json")
     R<Boolean> updateShopIsSynOrder(@Var("myURL") String myURL, @Query("shopId") Long shopId, @Query("status") int status);
 
+    /**
+     * 同步历史订单回调
+     *
+     * @param myURL
+     * @param shopId
+     * @return
+     */
     @Get(value = "{myURL}/zhishu/shopOrder/syncKfzHistoryOrderCallBack")
     R<Boolean> syncKfzHistoryOrderCallBack(@Var("myURL") String myURL, @Query("shopId") Long shopId);
 }
