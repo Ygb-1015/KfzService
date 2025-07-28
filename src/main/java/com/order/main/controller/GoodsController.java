@@ -76,9 +76,7 @@ public class GoodsController {
         return JsonUtil.transferToJson(map);
     }
 
-    /**
-     * 发布商品
-     */
+
     /**
      * 发布商品接口
      *
