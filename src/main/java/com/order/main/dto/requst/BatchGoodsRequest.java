@@ -18,6 +18,10 @@ public class BatchGoodsRequest {
      * 店铺ID
      */
     private Long shopId;
+    /**
+     * 主任务id
+     */
+    private Long taskId;
     
     /**
      * 用户ID

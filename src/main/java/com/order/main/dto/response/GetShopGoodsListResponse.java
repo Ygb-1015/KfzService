@@ -1,5 +1,7 @@
 package com.order.main.dto.response;
 
+
+import java.math.BigDecimal;
 import java.util.List;
 
 public class GetShopGoodsListResponse {
@@ -45,7 +47,7 @@ public class GetShopGoodsListResponse {
         private Long productArea;
 
         // 商品价格
-        private Long price;
+        private BigDecimal price;
 
         // 店铺分类编号
         private Long myCatId;
@@ -111,7 +113,7 @@ public class GetShopGoodsListResponse {
         private String imgUrl;
 
         // 商品原价
-        private Long oriPrice;
+        private BigDecimal oriPrice;
 
         // 商品货号
         private String itemSn;
@@ -178,11 +180,11 @@ public class GetShopGoodsListResponse {
             this.productArea = productArea;
         }
 
-        public Long getPrice() {
+        public BigDecimal getPrice() {
             return price;
         }
 
-        public void setPrice(Long price) {
+        public void setPrice(BigDecimal price) {
             this.price = price;
         }
 
@@ -354,11 +356,11 @@ public class GetShopGoodsListResponse {
             this.imgUrl = imgUrl;
         }
 
-        public Long getOriPrice() {
+        public BigDecimal getOriPrice() {
             return oriPrice;
         }
 
-        public void setOriPrice(Long oriPrice) {
+        public void setOriPrice(BigDecimal oriPrice) {
             this.oriPrice = oriPrice;
         }
 
