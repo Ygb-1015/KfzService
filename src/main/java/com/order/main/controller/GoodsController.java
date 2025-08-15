@@ -38,8 +38,8 @@ public class GoodsController {
      * @return
      */
     @GetMapping("/synchronizationGoods")
-    public Boolean synchronizationGoods(Long shopId,Long taskId) {
-        return goodsService.synchronizationGoods(shopId,taskId);
+    public Boolean synchronizationGoods(Long shopId,Long taskId,Integer sycFlag) {
+        return goodsService.synchronizationGoods(shopId,taskId,sycFlag);
     }
 
     @GetMapping("getShopInfo/{token}")

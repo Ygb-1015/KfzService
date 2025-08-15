@@ -141,4 +141,13 @@ public interface ErpClient {
      */
     @Get(value = "{myURL}/zhishu/shopOrder/syncKfzHistoryOrderCallBack")
     R<Boolean> syncKfzHistoryOrderCallBack(@Var("myURL") String myURL, @Query("shopId") Long shopId);
+    /**
+     * 总量同步拉取的时候清空表数据
+     *
+     * @param myURL
+     * @param shopId
+     * @return
+     */
+    @Delete(value = "{myURL}/zhishu/shopGoods/deleteTaskDataByShopId")
+    Boolean deleteTaskDataByShopId(@Var("myURL") String myURL, @Query("shopId") Long shopId);
 }

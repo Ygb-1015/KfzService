@@ -18,7 +18,7 @@ public final class ClientConstantUtils {
     public final static String PHP_URL = "http://118.195.130.47:8990/api"; // 正式环境
 
     // ERP接口地址
-    public final static String ERP_URL = "https://api.buzhiyushu.cn"; // 正式环境
-    // public final static String ERP_URL = "http://localhost:8080"; // 本地环境
+    // public final static String ERP_URL = "https://api.buzhiyushu.cn"; // 正式环境
+    public final static String ERP_URL = "http://localhost:8080"; // 本地环境
 
 }

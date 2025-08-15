@@ -58,7 +58,7 @@ public class GoodsServiceImpl implements GoodsService {
 
 
     @Override
-    public Boolean synchronizationGoods(Long shopId,Long taskId) {
+    public Boolean synchronizationGoods(Long shopId, Long taskId, Integer sycFlag) {
         // 根据店铺Id查询店铺信息
         ShopVo shopInfo = erpClient.getShopInfo(ClientConstantUtils.ERP_URL, shopId);
         Assert.isTrue(ObjectUtil.isNotEmpty(shopInfo), "查询不到店铺信息");
@@ -69,103 +69,107 @@ public class GoodsServiceImpl implements GoodsService {
         String currentDateTime = now.format(formatter);
 
         // 从Redis中获取上次同步时间
-        String lastGoodsSynTime = (String) redisUtils.getCacheObject("lastGoodsSynTime_" + shopInfo.getId());
-// 调用时检查
-//        if (ThreadPoolUtils.isThreadPoolActive()) {
-            ThreadPoolUtils.execute(() -> {
-                // 分批参数
-                int pageSize = 500; // 每批查询500条
-                int currentBatch = 0;
-                boolean hasMoreData = true;
+        // 调用时检查
+        String lastGoodsSynTime;
+        if (ObjectUtil.isNotEmpty(sycFlag) && sycFlag == 1) {
+            lastGoodsSynTime = null;
+            // 如果是总量，清空上次同步时间
+            redisUtils.deleteCacheObject("lastGoodsSynTime_" + shopInfo.getId());
+            // 清空表数据
+            erpClient.deleteTaskDataByShopId(ClientConstantUtils.ERP_URL, shopId);
+        } else {
+            lastGoodsSynTime = (String) redisUtils.getCacheObject("lastGoodsSynTime_" + shopInfo.getId());
+        }
+        ThreadPoolUtils.execute(() -> {
+            // 分批参数
+            int pageSize = 500; // 每批查询500条
+            int currentBatch = 0;
+            boolean hasMoreData = true;
 
-                // 初始化分批查询参数
-                String token = shopInfo.getToken();
-                String refreshToken = shopInfo.getRefreshToken();
-                boolean isRefreshToken = false;
+            // 初始化分批查询参数
+            String token = shopInfo.getToken();
+            String refreshToken = shopInfo.getRefreshToken();
+            boolean isRefreshToken = false;
 
-                while (hasMoreData) {
-                    currentBatch++;
-                    try {
-                        // 1. 分批查询商品数据
-                        GetShopGoodsListRequest request = new GetShopGoodsListRequest();
-                        request.setToken(token);
-                        request.setPageNum(currentBatch);
-                        request.setPageSize(pageSize);
+            while (hasMoreData) {
+                currentBatch++;
+                try {
+                    // 1. 分批查询商品数据
+                    GetShopGoodsListRequest request = new GetShopGoodsListRequest();
+                    request.setToken(token);
+                    request.setPageNum(currentBatch);
+                    request.setPageSize(pageSize);
 
-                        if (ObjectUtil.isNotNull(lastGoodsSynTime)) {
-                            request.setAddTimeBegin(lastGoodsSynTime);
-                        }
-
-                        KfzBaseResponse<GetShopGoodsListResponse> response = phpClient.getShopGoodsList(
-                                ClientConstantUtils.PHP_URL,
-                                request
-                        );
-
-                        // 处理token过期情况
-                        if (!isRefreshToken && ObjectUtil.isNotEmpty(response.getErrorResponse())) {
-                            List<Long> tokenErrorCode = Arrays.asList(1000L, 1001L, 2000L, 2001L);
-                            if (tokenErrorCode.contains(response.getErrorResponse().getCode())) {
-                                token = tokenUtils.refreshToken(refreshToken, shopId);
-                                isRefreshToken = true;
-                                continue; // 重新尝试当前批次
-                            } else {
-                                throw new RuntimeException("查询孔夫子店铺商品异常: " +
-                                        JSONObject.toJSONString(response));
-                            }
-                        }
-
-                        // 检查是否有数据
-                        if (ObjectUtil.isEmpty(response.getSuccessResponse()) ||
-                                ObjectUtil.isEmpty(response.getSuccessResponse().getList())) {
-                            hasMoreData = false;
-                            break;
-                        }
-
-                        List<GetShopGoodsListResponse.ShopGoods> batchData =
-                                response.getSuccessResponse().getList();
-
-                        // 2. 转换并处理当前批次数据
-                        List<ZhishuShopGoodsRequest> batchRequests = batchData.stream()
-                                .map(shopGoods -> convertToRequest(shopGoods, shopInfo))
-                                .collect(Collectors.toList());
-
-                        // 在B程序的synchronizationGoods方法中，获取总页数后：
-                        int totalBatches = response.getSuccessResponse().getPages();
-
-                        // 3. 构建并发送分批请求
-                        BatchGoodsRequest batchRequest = new BatchGoodsRequest();
-                        batchRequest.setShopId(shopId);
-                        batchRequest.setTaskId(taskId);
-                        batchRequest.setUserId(shopInfo.getCreateBy());
-                        batchRequest.setBatchData(batchRequests);
-                        batchRequest.setCurrentDateTime(currentDateTime);
-                        batchRequest.setBatchNo(currentBatch);
-                        batchRequest.setTotalBatches(totalBatches);
-                        batchRequest.setIsLastBatch(currentBatch == totalBatches);
-
-                        erpClient.batchGoodsComparison(ClientConstantUtils.ERP_URL, batchRequest);
-
-                        // 4. 控制处理速度
-                        if (!batchRequest.getIsLastBatch()) {
-                            Thread.sleep(200); // 批次间短暂休眠
-                        }
-
-                        // 检查是否还有更多数据
-                        if (response.getSuccessResponse().getPages() <= currentBatch) {
-                            hasMoreData = false;
-                        }
-
-                    } catch (Exception e) {
-                        log.error("处理第{}批数据时发生异常: {}", currentBatch, e.getMessage(), e);
-                        hasMoreData = false; // 发生异常时终止处理
-                        throw new RuntimeException("分批处理商品数据异常: " + e.getMessage(), e);
+                    if (ObjectUtil.isNotNull(lastGoodsSynTime)) {
+                        request.setAddTimeBegin(lastGoodsSynTime);
                     }
-                }
-            });
-//        }else{
-//            log.error("线程池未初始化或已关闭！");
-//        }
 
+                    KfzBaseResponse<GetShopGoodsListResponse> response = phpClient.getShopGoodsList(
+                            ClientConstantUtils.PHP_URL,
+                            request
+                    );
+
+                    // 处理token过期情况
+                    if (!isRefreshToken && ObjectUtil.isNotEmpty(response.getErrorResponse())) {
+                        List<Long> tokenErrorCode = Arrays.asList(1000L, 1001L, 2000L, 2001L);
+                        if (tokenErrorCode.contains(response.getErrorResponse().getCode())) {
+                            token = tokenUtils.refreshToken(refreshToken, shopId);
+                            isRefreshToken = true;
+                            continue; // 重新尝试当前批次
+                        } else {
+                            throw new RuntimeException("查询孔夫子店铺商品异常: " +
+                                    JSONObject.toJSONString(response));
+                        }
+                    }
+
+                    // 检查是否有数据
+                    if (ObjectUtil.isEmpty(response.getSuccessResponse()) ||
+                            ObjectUtil.isEmpty(response.getSuccessResponse().getList())) {
+                        hasMoreData = false;
+                        break;
+                    }
+
+                    List<GetShopGoodsListResponse.ShopGoods> batchData =
+                            response.getSuccessResponse().getList();
+
+                    // 2. 转换并处理当前批次数据
+                    List<ZhishuShopGoodsRequest> batchRequests = batchData.stream()
+                            .map(shopGoods -> convertToRequest(shopGoods, shopInfo))
+                            .collect(Collectors.toList());
+
+                    // 在B程序的synchronizationGoods方法中，获取总页数后：
+                    int totalBatches = response.getSuccessResponse().getPages();
+
+                    // 3. 构建并发送分批请求
+                    BatchGoodsRequest batchRequest = new BatchGoodsRequest();
+                    batchRequest.setShopId(shopId);
+                    batchRequest.setTaskId(taskId);
+                    batchRequest.setUserId(shopInfo.getCreateBy());
+                    batchRequest.setBatchData(batchRequests);
+                    batchRequest.setCurrentDateTime(currentDateTime);
+                    batchRequest.setBatchNo(currentBatch);
+                    batchRequest.setTotalBatches(totalBatches);
+                    batchRequest.setIsLastBatch(currentBatch == totalBatches);
+
+                    erpClient.batchGoodsComparison(ClientConstantUtils.ERP_URL, batchRequest);
+
+                    // 4. 控制处理速度
+                    if (!batchRequest.getIsLastBatch()) {
+                        Thread.sleep(200); // 批次间短暂休眠
+                    }
+
+                    // 检查是否还有更多数据
+                    if (response.getSuccessResponse().getPages() <= currentBatch) {
+                        hasMoreData = false;
+                    }
+
+                } catch (Exception e) {
+                    log.error("处理第{}批数据时发生异常: {}", currentBatch, e.getMessage(), e);
+                    hasMoreData = false; // 发生异常时终止处理
+                    throw new RuntimeException("分批处理商品数据异常: " + e.getMessage(), e);
+                }
+            }
+        });
         return true;
     }
 
@@ -365,9 +369,9 @@ public class GoodsServiceImpl implements GoodsService {
 
             Map successResponse = (Map) dataMap.get("successResponse");
             Map kongkzImage = (Map) successResponse.get("image");
-            System.out.println("上传的图片："+kongkzImage);
-            String kongkzImageStr = kongkzImage.get("url").toString().replace("_s.","_n.");
-            System.out.println("修改后缀的图片："+kongkzImageStr);
+            System.out.println("上传的图片：" + kongkzImage);
+            String kongkzImageStr = kongkzImage.get("url").toString().replace("_s.", "_n.");
+            System.out.println("修改后缀的图片：" + kongkzImageStr);
             if (i == 0) {
                 images = kongkzImageStr;
             } else {
@@ -385,7 +389,7 @@ public class GoodsServiceImpl implements GoodsService {
         }
 
         request.setImages(images);
-        System.out.println("上传的图片："+images);
+        System.out.println("上传的图片：" + images);
 //        request.setItemDesc(map.get("itemDesc") == null ? "" : map.get("itemDesc").toString());
         request.setItemDesc("");
         request.setBearShipping(map.get("bearShipping").toString());
@@ -419,24 +423,24 @@ public class GoodsServiceImpl implements GoodsService {
                 }
             }
 
-            if(errorMsg.contains("品相必须为")){
+            if (errorMsg.contains("品相必须为")) {
                 System.out.println("品相审核失败，设置为九五品，重新调用上传接口-------------------");
                 request.setQuality("95");
                 dataMap = JsonUtil.transferToObj(itemAdd(request), Map.class);
                 errorResponse = (Map) dataMap.get("errorResponse");
-            }else if(errorMsg.contains("商品已存在")){
+            } else if (errorMsg.contains("商品已存在")) {
                 System.out.println("商品已存在，修改价格重新上传接口--------------------");
                 request.setPrice(NumUtils.randomAdjust(new BigDecimal(request.getPrice())).toString());
                 dataMap = JsonUtil.transferToObj(itemAdd(request), Map.class);
                 errorResponse = (Map) dataMap.get("errorResponse");
 
-                if(errorResponse == null){
+                if (errorResponse == null) {
                     //上传成功，修改erp仓库价格
                     System.out.println("修改erp商品价格---------------");
                     Map editPriceMap = new HashMap();
-                    editPriceMap.put("artNo",request.getItemSn());
-                    editPriceMap.put("price",new BigDecimal(request.getPrice()).multiply(new BigDecimal(100)).setScale(0, RoundingMode.DOWN));
-                    System.out.println("修改后的价格："+editPriceMap.get("price"));
+                    editPriceMap.put("artNo", request.getItemSn());
+                    editPriceMap.put("price", new BigDecimal(request.getPrice()).multiply(new BigDecimal(100)).setScale(0, RoundingMode.DOWN));
+                    System.out.println("修改后的价格：" + editPriceMap.get("price"));
                     InterfaceUtils.getInterfacePost("/zhishu/shopGoods/editShopGoodsPrice", editPriceMap);
                 }
             }
@@ -450,7 +454,7 @@ public class GoodsServiceImpl implements GoodsService {
                 }
             }
 
-            if(errorMsg.contains("图片上传失败")){
+            if (errorMsg.contains("图片上传失败")) {
                 System.out.println("图片上传失败，重新调用上传接口--------------------");
                 try {
                     System.out.println("线程停止2s-------------------");
@@ -507,7 +511,7 @@ public class GoodsServiceImpl implements GoodsService {
     }
 
     @Override
-    public void  goodsAddMain(Map map, Map dataMap) {
+    public void goodsAddMain(Map map, Map dataMap) {
 
         // 任务信息对象
         Map taskBo = (Map) map.get("taskBo");
@@ -589,18 +593,18 @@ public class GoodsServiceImpl implements GoodsService {
      * @param blackStr           用户自定义黑名单
      */
     public synchronized void goodsAdd(Map shopVo,
-                         List<Map> bookBaseInfoVoList,
-                         String filePath,
-                         String taskId,
-                         Map map,
-                         String systemWhiteStr,
-                         String systemBlackStr,
-                         String whiteStr,
-                         String blackStr,
-                         String userId) {
+                                      List<Map> bookBaseInfoVoList,
+                                      String filePath,
+                                      String taskId,
+                                      Map map,
+                                      String systemWhiteStr,
+                                      String systemBlackStr,
+                                      String whiteStr,
+                                      String blackStr,
+                                      String userId) {
         // 标记是否是自动上传的商品
         String autoMark = map.get("mark") != null && StringUtils.isNotEmpty(map.get("mark").toString()) ? map.get("mark").toString() : "";
-        if(autoMark.equals("autoGoodsAdd")){
+        if (autoMark.equals("autoGoodsAdd")) {
             try {
                 System.out.println("线程停止10s-------------------");
                 Thread.sleep(10000); // 1秒 = 1000毫秒
@@ -741,12 +745,11 @@ public class GoodsServiceImpl implements GoodsService {
              * 12043000000000000 线装古籍 - 小说
              */
             String catId = "";
-            if(tpl.equals("2")){
+            if (tpl.equals("2")) {
                 catId = "12043000000000000";
             }
 
             kongfzAddGoodMap.put("catId", catId);
-
 
 
             kongfzAddGoodMap.put("isbn", bookBaseInfoVo.get("isbn"));
@@ -760,7 +763,7 @@ public class GoodsServiceImpl implements GoodsService {
             /**
              * 开本
              */
-            kongfzAddGoodMap.put("pageSize", bookBaseInfoVo.get("format")+"开");
+            kongfzAddGoodMap.put("pageSize", bookBaseInfoVo.get("format") + "开");
             /**
              * 字数
              */
@@ -932,7 +935,6 @@ public class GoodsServiceImpl implements GoodsService {
             kongfzAddGoodMap.put("mouldld", shopDetailVo.get("templateId"));
             kongfzAddGoodMap.put("weight", shopDetailVo.get("bookWeight"));
             kongfzAddGoodMap.put("weightPiece", shopDetailVo.get("standardNumber"));
-
 
 
             kongfzAddGoodMap.put("author", bookBaseInfoVo.get("author"));
@@ -1219,12 +1221,12 @@ public class GoodsServiceImpl implements GoodsService {
             System.out.println("新增通知-----");
             // 若是自动上传的商品，则必定是一个,若是上传失败则调用接口，记录通知
             Map map = new HashMap();
-            map.put("msg",msg);
-            map.put("userId",userId);
-            map.put("isbn",dataList.get(0));
-            map.put("bookName",dataList.get(1));
-            map.put("sender","孔夫子");
-            InterfaceUtils.getInterfacePost("/zhishu/notice/addNotice",map);
+            map.put("msg", msg);
+            map.put("userId", userId);
+            map.put("isbn", dataList.get(0));
+            map.put("bookName", dataList.get(1));
+            map.put("sender", "孔夫子");
+            InterfaceUtils.getInterfacePost("/zhishu/notice/addNotice", map);
         }
     }
 

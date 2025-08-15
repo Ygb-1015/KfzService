@@ -7,7 +7,7 @@ import java.util.Map;
 
 public interface GoodsService {
 
-    Boolean synchronizationGoods(Long shopId,Long taskId);
+    Boolean synchronizationGoods(Long shopId,Long taskId,Integer sycFlag);
 
     Boolean updateArtNo(UpdateArtNoRequest request);
 
