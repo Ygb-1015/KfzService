@@ -7,6 +7,17 @@ spring:
     username: roo
     password: 12345678
     driver-class-name: com.mysql.cj.jdbc.Driver
+  redis:
+    host: 146.56.227.42  # Redis服务器地址
+    port: 6379  # Redis服务器端口
+    database: 0 # 默认数据库索引，可根据需要指定不同的数据库
+    password: Qq123123  # 如果设置了密码，请在此处填写
+    timeout: 10s  # 连接超时时间
+    lettuce:
+      pool:
+        max-active: 8 # 最大连接数
+        max-idle: 8   # 最大空闲连接数
+        min-idle: 0   # 最小空闲连接数
 
 mybatis:
   mapper-locations: classpath:mapper/*.xml
@@ -16,8 +27,9 @@ mybatis:
 
 forest:
   max-connections: 1000        # 连接池最大连接数
-  connect-timeout: 3000        # 连接超时时间，单位为毫秒
-  read-timeout: 3000           # 数据读取超时时间，单位为毫秒
+  connect-timeout: 10000        # 连接超时时间，单位为毫秒
+  read-timeout: 10000           # 数据读取超时时间，单位为毫秒
+
 
 
 
