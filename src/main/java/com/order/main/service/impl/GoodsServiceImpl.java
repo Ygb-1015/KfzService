@@ -92,6 +92,7 @@ public class GoodsServiceImpl implements GoodsService {
             boolean isRefreshToken = false;
 
             while (hasMoreData) {
+                int totalNum = 1;
                 currentBatch++;
                 try {
                     // 1. 分批查询商品数据
@@ -129,8 +130,15 @@ public class GoodsServiceImpl implements GoodsService {
                         break;
                     }
 
+
                     List<GetShopGoodsListResponse.ShopGoods> batchData =
                             response.getSuccessResponse().getList();
+                    Integer total = response.getSuccessResponse().getTotal();
+                    // 修改该店铺最后一次任务的执行数据条数
+                    if(totalNum == 1){
+                        erpClient.editTaskDataNum(ClientConstantUtils.ERP_URL,shopId,Long.valueOf(total) , "GET_KW_SHOP_GOODS");
+                        totalNum++;
+                    }
 
                     // 2. 转换并处理当前批次数据
                     List<ZhishuShopGoodsRequest> batchRequests = batchData.stream()

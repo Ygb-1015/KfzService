@@ -6,6 +6,7 @@ import com.order.main.dto.bo.*;
 import com.order.main.dto.requst.*;
 import com.order.main.dto.response.ShopVo;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
@@ -150,4 +151,15 @@ public interface ErpClient {
      */
     @Delete(value = "{myURL}/zhishu/shopGoods/deleteTaskDataByShopId")
     Boolean deleteTaskDataByShopId(@Var("myURL") String myURL, @Query("shopId") Long shopId);
+    /**
+     * 总量同步拉取的时候清空表数据
+     *
+     * @param myURL
+     * @param shopIds 店铺id
+     * @param dataNum 数据条数
+     * @param taskType 任务类型
+     * @return
+     */
+    @Get(value = "{myURL}/zhishu/task/editTaskDataNum")
+    Boolean editTaskDataNum(@Var("myURL") String myURL, @Query("shopIds") Long shopIds, @Query("dataNum") Long dataNum, @Query("taskType") String taskType);
 }
