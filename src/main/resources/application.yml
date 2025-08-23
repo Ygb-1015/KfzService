@@ -27,8 +27,8 @@ mybatis:
 
 forest:
   max-connections: 1000        # 连接池最大连接数
-  connect-timeout: 10000        # 连接超时时间，单位为毫秒
-  read-timeout: 10000           # 数据读取超时时间，单位为毫秒
+  connect-timeout: 30000        # 连接超时时间，单位为毫秒
+  read-timeout: 50000        # 数据读取超时时间，单位为毫秒
 
 
 
