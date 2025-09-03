@@ -17,6 +17,34 @@ public class ZhishuShopGoodsRequest {
     private String id;
 
     /**
+     * 作者
+     */
+    private String author;
+
+    /**
+     * 出版社
+     */
+    private String publisher;
+
+    /**
+     * 出版时间
+     */
+    private String publisherTime;
+
+    /**
+     * 开本
+     */
+    private String format;
+    /**
+     * 开本
+     */
+    private String wordage;
+    /**
+     * 统一书号
+     */
+    private String unifiedIsbn;
+
+    /**
      * 用户id
      */
     private String userId;

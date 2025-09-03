@@ -3,6 +3,7 @@ package com.order.main.service.impl;
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSONObject;
+import com.dtflys.forest.config.ForestConfiguration;
 import com.dtflys.forest.exceptions.ForestNetworkException;
 import com.order.main.dto.requst.*;
 import com.order.main.dto.response.*;
@@ -104,11 +105,9 @@ public class GoodsServiceImpl implements GoodsService {
                     if (ObjectUtil.isNotNull(lastGoodsSynTime)) {
                         request.setAddTimeBegin(lastGoodsSynTime);
                     }
+                    // 添加超时重连机制
 
-                    KfzBaseResponse<GetShopGoodsListResponse> response = phpClient.getShopGoodsList(
-                            ClientConstantUtils.PHP_URL,
-                            request
-                    );
+                    KfzBaseResponse<GetShopGoodsListResponse> response = getShopGoodsListWithRetry(request);
 
                     // 处理token过期情况
                     if (!isRefreshToken && ObjectUtil.isNotEmpty(response.getErrorResponse())) {
@@ -144,6 +143,7 @@ public class GoodsServiceImpl implements GoodsService {
                     List<ZhishuShopGoodsRequest> batchRequests = batchData.stream()
                             .map(shopGoods -> convertToRequest(shopGoods, shopInfo))
                             .collect(Collectors.toList());
+                    System.out.println("wdcTest:" + batchRequests);
 
                     // 在B程序的synchronizationGoods方法中，获取总页数后：
                     int totalBatches = response.getSuccessResponse().getPages();
@@ -180,11 +180,22 @@ public class GoodsServiceImpl implements GoodsService {
         });
         return true;
     }
-
+    // 在你的服务层中使用
+    public KfzBaseResponse<GetShopGoodsListResponse> getShopGoodsListWithRetry(GetShopGoodsListRequest request) {
+        return RetryUtils.executeWithRetry(() -> {
+            return phpClient.getShopGoodsList(ClientConstantUtils.PHP_URL, request);
+        }, 3, 2000);
+    }
     // 转换方法提取为独立方法
     private ZhishuShopGoodsRequest convertToRequest(GetShopGoodsListResponse.ShopGoods shopGoods, ShopVo shopInfo) {
         ZhishuShopGoodsRequest request = new ZhishuShopGoodsRequest();
         request.setUserId(shopInfo.getCreateBy().toString());
+        request.setAuthor(shopGoods.getAuthor());
+        request.setPublisher(shopGoods.getPress());
+        request.setPublisherTime(shopGoods.getPubDate());
+        // TODO 开本 默认32 字数默认2000
+        request.setFormat("32");
+        request.setWordage("2000");
         request.setProductId(shopGoods.getItemId().toString());
         request.setGoodsName(shopGoods.getItemName());
         request.setIsbn(shopGoods.getIsbn());
