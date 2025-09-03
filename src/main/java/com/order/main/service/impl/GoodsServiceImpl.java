@@ -190,9 +190,9 @@ public class GoodsServiceImpl implements GoodsService {
     private ZhishuShopGoodsRequest convertToRequest(GetShopGoodsListResponse.ShopGoods shopGoods, ShopVo shopInfo) {
         ZhishuShopGoodsRequest request = new ZhishuShopGoodsRequest();
         request.setUserId(shopInfo.getCreateBy().toString());
-        request.setAuthor(shopGoods.getAuthor());
-        request.setPublisher(shopGoods.getPress());
-        request.setPublisherTime(shopGoods.getPubDate());
+        request.setAuthor(ObjectUtil.isEmpty(shopGoods.getAuthor()) ? "不详" : shopGoods.getAuthor());
+        request.setPublisher(ObjectUtil.isEmpty(shopGoods.getPress()) ? "不详" : shopGoods.getPress());
+        request.setPublisherTime(Objects.equals(shopGoods.getPubDate(),"0000-00-00")? "1970-01-01":shopGoods.getPubDate());
         // TODO 开本 默认32 字数默认2000
         request.setFormat("32");
         request.setWordage("2000");
