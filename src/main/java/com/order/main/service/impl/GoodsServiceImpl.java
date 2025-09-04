@@ -198,7 +198,11 @@ public class GoodsServiceImpl implements GoodsService {
         request.setWordage("2000");
         request.setProductId(shopGoods.getItemId().toString());
         request.setGoodsName(shopGoods.getItemName());
-        request.setIsbn(shopGoods.getIsbn());
+        if(ObjectUtil.isNotEmpty(shopGoods.getIsbn())){
+            request.setIsbn(shopGoods.getIsbn());
+        } else {
+            request.setIsbn(IsbnUtils.generateRandomIsbn());
+        }
         request.setArtNo(shopGoods.getItemSn());
         request.setStock(0L);
         request.setPrice(shopGoods.getPrice().multiply(new BigDecimal(100)).longValue());
