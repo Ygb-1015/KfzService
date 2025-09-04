@@ -367,52 +367,8 @@ public class GoodsServiceImpl implements GoodsService {
         request.setUnifiedIsbn(map.get("unifiedIsbn") == null ? "" : map.get("unifiedIsbn").toString());
 
 
-        // 获取实拍图网路路径
-        String[] imagesArr = map.get("images") == null ? new String[0] : map.get("images").toString().split(";");
 
-        String images = "";
-        for (int i = 0; i < imagesArr.length; i++) {
-
-            String iamge = imagesArr[i];
-
-            Map dataMap;
-            try {
-                dataMap = JsonUtil.transferToObj(upload(iamge, request.getToken()), Map.class);
-            } catch (Exception e) {
-                System.out.println("上传图片异常---------------");
-                e.printStackTrace();
-                continue;
-            }
-
-            Map errorResponse = (Map) dataMap.get("errorResponse");
-            if (errorResponse != null) {
-                System.out.println("上传图片报错---------errorResponse------：" + errorResponse);
-                continue;
-            }
-
-            Map successResponse = (Map) dataMap.get("successResponse");
-            Map kongkzImage = (Map) successResponse.get("image");
-            System.out.println("上传的图片：" + kongkzImage);
-            String kongkzImageStr = kongkzImage.get("url").toString().replace("_s.", "_n.");
-            System.out.println("修改后缀的图片：" + kongkzImageStr);
-            if (i == 0) {
-                images = kongkzImageStr;
-            } else {
-                images = images + ";" + kongkzImageStr;
-            }
-            // 当图片数量不足八张时
-            if (i == imagesArr.length - 1 && i < 8) {
-                for (int j = i; j < 7; j++) {
-                    images = images + ";" + kongkzImageStr;
-                }
-            }
-        }
-        if (images.equals("")) {
-            return "图片上传失败";
-        }
-
-        request.setImages(images);
-        System.out.println("上传的图片：" + images);
+        request.setImages(map.get("images") == null ? "" : map.get("images").toString());
 //        request.setItemDesc(map.get("itemDesc") == null ? "" : map.get("itemDesc").toString());
         request.setItemDesc("");
         request.setBearShipping(map.get("bearShipping").toString());
@@ -428,15 +384,17 @@ public class GoodsServiceImpl implements GoodsService {
         request.setBinding(map.get("binding") == null || StringUtils.isEmpty(map.get("binding").toString()) ? "平装" : map.get("binding").toString());
         request.setOtherName(map.get("otherName") == null ? "" : map.get("otherName").toString());
 
-        Map dataMap = JsonUtil.transferToObj(itemAdd(request), Map.class);
+        String dataStr = itemAdd(request);
+        Map dataMap = JsonUtil.transferToObj(dataStr, Map.class);
         Map errorResponse = (Map) dataMap.get("errorResponse");
 
         //如果报错信息不为空，并且存在品相必须为字样，则将品相改为95品重新发布
         String errorMsg = "";
         if (errorResponse != null) {
-            System.out.println("---------------------上传报错");
-            System.out.println(JsonUtil.transferToJson(errorResponse) + "------------");
             errorMsg = errorResponse.get("subMsg").toString();
+            if(errorResponse.get("msg") != null){
+                errorMsg += ";"+errorResponse.get("msg");
+            }
             if (errorResponse.get("data") != null) {
                 Map data = (Map) errorResponse.get("data");
                 Collection<String> values = data.values();
@@ -507,29 +465,21 @@ public class GoodsServiceImpl implements GoodsService {
             System.out.println("---------------------上传成功");
             Map successResponse = (Map) dataMap.get("successResponse");
             Map item = (Map) successResponse.get("item");
-            // 上传成功删除本地缓存图片
-            System.out.println("删除生成的图片---------------↓");
-            ImageUtils.deleteImage(request.getImgUrl());
-            String[] imagesDel = map.get("images").toString().split(";");
-            for (String iamge : imagesDel) {
-                ImageUtils.deleteImage(iamge);
-            }
-            System.out.println("删除生成的图片---------------↑");
 
-            if (map.get("goodId") != null) {
-                Map callBackMap = new HashMap();
-                callBackMap.put("shopId", map.get("shopId").toString());
-                callBackMap.put("goodId", map.get("goodId").toString());
-                callBackMap.put("itemId", item.get("itemId"));
-                callBackMap.put("userId", map.get("userId").toString());
-                // 调用接口
-                System.out.println("-----------------------调用新增发布商品接口");
-                InterfaceUtils.getInterfacePost("/api/kongfz/goodAddCallBack", callBackMap);
-            } else {
-                System.out.println("excel发布孔夫子商品------");
-            }
-
-            return "上传成功";
+            return  item.get("itemId").toString();
+//
+//            if (map.get("goodId") != null) {
+//                Map callBackMap = new HashMap();
+//                callBackMap.put("shopId", map.get("shopId").toString());
+//                callBackMap.put("goodId", map.get("goodId").toString());
+//                callBackMap.put("itemId", item.get("itemId"));
+//                callBackMap.put("userId", map.get("userId").toString());
+//                // 调用接口
+//                System.out.println("-----------------------调用新增发布商品接口");
+//                InterfaceUtils.getInterfacePost("/api/kongfz/goodAddCallBack", callBackMap);
+//            } else {
+//                System.out.println("excel发布孔夫子商品------");
+//            }
         }
     }
 
@@ -675,15 +625,20 @@ public class GoodsServiceImpl implements GoodsService {
             dataList.add(new BigDecimal(bookBaseInfoVo.get("price").toString()).divide(new BigDecimal(100)).toString());
             dataList.add(String.valueOf(bookBaseInfoVo.get("stock")));
             if ((bookBaseInfoVo.get("id") == null || bookBaseInfoVo.get("id").equals("")) && !tpl.equals("2")) {
-                wirteExcel(taskId, shopVo, bookBaseInfoVoList, dataList, logsMap, filePath, "未在孔网查询到图书条目", autoMark, userId);
-                continue;
+                //修改模板未模板2,无isbn上传发布
+                tpl = "2";
+                bookBaseInfoVo.put("author","未知");
+                bookBaseInfoVo.put("publisher","未知");
+                bookBaseInfoVo.put("publicationTime","1999-09");
+//                wirteExcel(taskId, shopVo, bookBaseInfoVoList,bookBaseInfoVo, dataList, logsMap, filePath, "未在孔网查询到图书条目", autoMark, userId);
+//                continue;
             }
             if (bookBaseInfoVo.get("msg") != null && bookBaseInfoVo.get("msg").equals("无数据")) {
-                wirteExcel(taskId, shopVo, bookBaseInfoVoList, dataList, logsMap, filePath, "未获取到商品信息", autoMark, userId);
+                wirteExcel(taskId, shopVo, bookBaseInfoVoList,bookBaseInfoVo, dataList, logsMap, filePath, "未获取到商品信息", autoMark, userId);
                 continue;
             }
             if (bookBaseInfoVo.get("bookName") == null) {
-                wirteExcel(taskId, shopVo, bookBaseInfoVoList, dataList, logsMap, filePath, "未获取到书名信息", autoMark, userId);
+                wirteExcel(taskId, shopVo, bookBaseInfoVoList,bookBaseInfoVo, dataList, logsMap, filePath, "未获取到书名信息", autoMark, userId);
                 continue;
             }
 
@@ -699,7 +654,7 @@ public class GoodsServiceImpl implements GoodsService {
             // 校验书名
             systemBlack = systemBlack ? systemBlack : checkString(bookBaseInfoVo.get("bookName").toString(), BookFilterUtil.BOOKNAMEFILTERSTR);
             if (systemBlack) {
-                wirteExcel(taskId, shopVo, bookBaseInfoVoList, dataList, logsMap, filePath, "该商品存在黑名单中", autoMark, userId);
+                wirteExcel(taskId, shopVo, bookBaseInfoVoList,bookBaseInfoVo, dataList, logsMap, filePath, "该商品存在黑名单中", autoMark, userId);
                 continue;
             }
             // 校验白名单和黑名单
@@ -740,7 +695,7 @@ public class GoodsServiceImpl implements GoodsService {
                 }
                 if (blackBool) {
                     // 黑名单校验成功，跳出循环
-                    wirteExcel(taskId, shopVo, bookBaseInfoVoList, dataList, logsMap, filePath, "该商品存在黑名单中", autoMark, userId);
+                    wirteExcel(taskId, shopVo, bookBaseInfoVoList,bookBaseInfoVo, dataList, logsMap, filePath, "该商品存在黑名单中", autoMark, userId);
                     continue;
                 }
             }
@@ -751,7 +706,7 @@ public class GoodsServiceImpl implements GoodsService {
                     Boolean exists = goodsFilterStr.contains(bookBaseInfoVo.get("goodsId").toString());
                     if (exists) {
                         // 写入日志
-                        wirteExcel(taskId, shopVo, bookBaseInfoVoList, dataList, logsMap, filePath, "商品已发布,无法继续发布", autoMark, userId);
+                        wirteExcel(taskId, shopVo, bookBaseInfoVoList,bookBaseInfoVo, dataList, logsMap, filePath, "商品已发布,无法继续发布", autoMark, userId);
                         continue;
                     }
                 }
@@ -799,7 +754,7 @@ public class GoodsServiceImpl implements GoodsService {
                 kongfzAddGoodMap.put("price", price);
             } else {
                 // 如果price不能转为 BigDecimal类型，则为报错信息
-                wirteExcel(taskId, shopVo, bookBaseInfoVoList, dataList, logsMap, filePath, price, autoMark, userId);
+                wirteExcel(taskId, shopVo, bookBaseInfoVoList,bookBaseInfoVo, dataList, logsMap, filePath, price, autoMark, userId);
                 continue;
             }
 
@@ -838,7 +793,8 @@ public class GoodsServiceImpl implements GoodsService {
                 useImages = new String[1];
                 useImages[0] = bookImgUrl;
             } else {
-                useImages = bookBaseInfoVo.get("useImages") != null && StringUtils.isNotEmpty(bookBaseInfoVo.get("useImages").toString()) ? bookBaseInfoVo.get("useImages").toString().split(",") : new String[0];
+                useImages = bookBaseInfoVo.get("useImages") != null && StringUtils.isNotEmpty(bookBaseInfoVo.get("useImages").toString()) ?
+                        bookBaseInfoVo.get("useImages").toString().split(",") : new String[0];
             }
 
             System.out.println("用户实拍图数量------:" + useImages.length + ":" + JsonUtil.transferToJson(useImages));
@@ -850,32 +806,23 @@ public class GoodsServiceImpl implements GoodsService {
 
             if (useImages.length == 0) {
                 // 没有实拍图则获取中心书库的图片
-                String image = "http://111.229.25.150:8001/" + bookBaseInfoVo.get("bookPic");
-
-                // 如果图片访问不到
-                Boolean bool = ImageUtils.isImageExists(image);
-                if (!bool) {
-                    // 白底图
-                    image = getWhiteImage(bookBaseInfoVo.get("bookName").toString());
-                    noSyImage = image;
-                } else {
-                    noSyImage = image;
-                    // 图片增加水印，若报错则返回白底图
-                    if (specSyImageUrl != "") {
-                        image = getImageSy(specSyImageUrl, image, bookBaseInfoVo.get("bookName").toString());
-                    }
+                String image = bookBaseInfoVo.get("bookPic").toString();
+                noSyImage = image;
+                // 图片增加水印，若报错则返回白底图
+                if (specSyImageUrl != "") {
+                    image = getImageSy(specSyImageUrl, image, bookBaseInfoVo.get("bookName").toString());
                 }
-                System.out.println("中央书库上传首图-------------" + image + "；书名:" + bookBaseInfoVo.get("bookName"));
-                kongfzAddGoodMap.put("imgUrl", image);
                 // 实拍图
                 images = image;
+                kongfzAddGoodMap.put("imgUrl", image);
             } else {
                 // 第一张图作为首图,第一张肯定有水印
                 String imageFirst = "";
                 if (useImages[0].contains("http://") || useImages[0].contains("https://")) {
                     imageFirst = useImages[0];
                 } else {
-                    imageFirst = UploadUtil.getFiles("", bookBaseInfoVo.get("bookName").toString()) + useImages[0];
+                    //用户实拍图
+                    imageFirst = useImages[0];
                 }
                 noSyImage = imageFirst;
                 if (specSyImageUrl != "") {
@@ -891,19 +838,13 @@ public class GoodsServiceImpl implements GoodsService {
                             continue;
                         }
                         // 图片路径
-                        String image = "";
-                        // 若路径存在http 或者 https 则直接使用
-                        if (useImage.contains("http://") || useImage.contains("https://")) {
-                            image = useImage;
-                        } else {
-                            image = UploadUtil.getFiles("", bookBaseInfoVo.get("bookName").toString()) + useImage;
-                        }
+                        String image = useImage;
 
                         // 水印不为空则增加水印
                         if (specSyImageUrl != "") {
                             image = getImageSy(specSyImageUrl, image, bookBaseInfoVo.get("bookName").toString());
                         }
-                        System.out.println("用户上传后续-------------" + image + "；书名:" + bookBaseInfoVo.get("bookName").toString());
+
                         // 记录图片
                         if (images == "") {
                             images = image;
@@ -917,20 +858,10 @@ public class GoodsServiceImpl implements GoodsService {
                         if (StringUtils.isEmpty(useImage)) {
                             continue;
                         }
-                        // 图片路径
-                        String image = "";
-                        // 若路径存在http 或者 https 则直接使用
-                        if (useImage.contains("http://") || useImage.contains("https://")) {
-                            image = useImage;
-                        } else {
-                            image = UploadUtil.getFiles("", bookBaseInfoVo.get("bookName").toString()) + useImage;
-                        }
-
-                        System.out.println("实拍图 为1时，正常不加水印图片：用户上传后续-------------" + image + "；书名:" + bookBaseInfoVo.get("bookName").toString());
                         if (images == "") {
-                            images = image;
+                            images = useImage;
                         } else {
-                            images = images + ";" + image;
+                            images = images + ";" + useImage;
                         }
                     }
                 }
@@ -956,8 +887,19 @@ public class GoodsServiceImpl implements GoodsService {
             }
 
             kongfzAddGoodMap.put("mouldld", shopDetailVo.get("templateId"));
-            kongfzAddGoodMap.put("weight", shopDetailVo.get("bookWeight"));
-            kongfzAddGoodMap.put("weightPiece", shopDetailVo.get("standardNumber"));
+
+
+            try{
+                BigDecimal bookWeight = shopDetailVo.get("bookWeight") == null ? new BigDecimal("0") : new BigDecimal(shopDetailVo.get("bookWeight").toString());
+                BigDecimal weightPiece = shopDetailVo.get("standardNumber") == null ? new BigDecimal("0") : new BigDecimal(shopDetailVo.get("standardNumber").toString());
+
+                kongfzAddGoodMap.put("weight", bookWeight.divide(new BigDecimal("100")));
+                kongfzAddGoodMap.put("weightPiece", weightPiece.divide(new BigDecimal("100")));
+            }catch(Exception e){
+                e.printStackTrace();
+                kongfzAddGoodMap.put("weight", shopDetailVo.get("bookWeight"));
+                kongfzAddGoodMap.put("weightPiece", shopDetailVo.get("standardNumber"));
+            }
 
 
             kongfzAddGoodMap.put("author", bookBaseInfoVo.get("author"));
@@ -969,7 +911,7 @@ public class GoodsServiceImpl implements GoodsService {
             String msg = goodsAddOne(kongfzAddGoodMap);
 
             if (StringUtils.isNotEmpty(msg)) {
-                wirteExcel(taskId, shopVo, bookBaseInfoVoList, dataList, logsMap, filePath, msg, autoMark, userId);
+                wirteExcel(taskId, shopVo, bookBaseInfoVoList,bookBaseInfoVo, dataList, logsMap, filePath, msg, autoMark, userId);
             }
         }
     }
@@ -1175,9 +1117,13 @@ public class GoodsServiceImpl implements GoodsService {
     public String getImageSy(String specSyImageUrl, String iamge, String goodsName) {
 
         try {
+            System.out.println("生成水印图片---------------------");
+            System.out.println(specSyImageUrl);
+            System.out.println(iamge);
             String uuid = UUID.randomUUID().toString();
             return ImageUtils.mergeImages(iamge, specSyImageUrl, uuid + ".png");
         } catch (IOException e) {
+            System.out.println("水印报错，生成白底图");
             e.printStackTrace();
             return getWhiteImage(goodsName);
         }
@@ -1216,6 +1162,7 @@ public class GoodsServiceImpl implements GoodsService {
     public void wirteExcel(String taskId,
                            Map shopVo,
                            List<Map> bookBaseInfoVoList,
+                           Map bookBaseInfoVo,
                            List<String> dataList,
                            Map<String, String> logsMap,
                            String filePath,
@@ -1244,12 +1191,14 @@ public class GoodsServiceImpl implements GoodsService {
             System.out.println("新增通知-----");
             // 若是自动上传的商品，则必定是一个,若是上传失败则调用接口，记录通知
             Map map = new HashMap();
-            map.put("msg", msg);
-            map.put("userId", userId);
-            map.put("isbn", dataList.get(0));
-            map.put("bookName", dataList.get(1));
-            map.put("sender", "孔夫子");
-            InterfaceUtils.getInterfacePost("/zhishu/notice/addNotice", map);
+            map.put("msg",msg);
+            map.put("userId",userId);
+            map.put("isbn",dataList.get(0));
+            map.put("bookName",dataList.get(1));
+            map.put("sender","孔夫子");
+            map.put("shopName",shopVo.get("shopName"));
+            map.put("artNo",bookBaseInfoVo.get("artNo"));
+            InterfaceUtils.getInterfacePost("/zhishu/notice/addNotice",map);
         }
     }
 

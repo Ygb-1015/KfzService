@@ -93,6 +93,22 @@ public class ImageUtils {
         }
     }
 
+    public static boolean isImageExistsWithGet(String imageUrl) {
+        try {
+            URL url = new URL(imageUrl);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(5000);
+            connection.setReadTimeout(5000);
+            connection.setRequestProperty("User-Agent", "Java Client");
+
+            int responseCode = connection.getResponseCode();
+            return responseCode == HttpURLConnection.HTTP_OK;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     /**
      * 将主图和水印图片合成一张，水印图片完美覆盖主图
      *

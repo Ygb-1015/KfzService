@@ -19,15 +19,25 @@ public final class UploadUtil {
         if (imgVesselUrl.equals("")) {
             imgVesselUrl = "https://img.buzhiyushu.cn/zhishu1";
 //            imgVesselUrl = "http://111.229.25.150:9000/zhishu1";
-            //书名进行md5加密
-            String bookNameMd5 = encryptByMd5(bookName);
             //获取加密后打首字母大写
-            String result = getFirstCharToUpper(bookNameMd5);
+            String result = getMd5FirstChart(bookName);
 
             return imgVesselUrl + "/" + result + "/";
         } else {
             return imgVesselUrl;
         }
+    }
+
+    /**
+     * 根据MD5加密后获取大写首字母
+     * @param bookName
+     * @return
+     */
+    public static String getMd5FirstChart(String bookName){
+        //书名进行md5加密
+        String bookNameMd5 = encryptByMd5(bookName);
+        //获取加密后打首字母大写
+        return getFirstCharToUpper(bookNameMd5);
     }
 
     public static String getFirstCharToUpper(String input) {

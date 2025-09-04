@@ -85,8 +85,8 @@ public class GoodsController {
      * @throws Exception
      */
     @PostMapping("/goodAddOne")
-    public void goodAddOne(@RequestBody Map map) {
-        goodsService.goodsAddOne(map);
+    public String goodAddOne(@RequestBody Map map) {
+        return goodsService.goodsAddOne(map);
     }
 
     /**
