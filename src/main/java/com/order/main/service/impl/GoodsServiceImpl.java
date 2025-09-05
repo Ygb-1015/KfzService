@@ -379,7 +379,9 @@ public class GoodsServiceImpl implements GoodsService {
         request.setIsbn(map.get("isbn") == null ? "" : map.get("isbn").toString());
         request.setAuthor(map.get("author") == null ? "" : map.get("author").toString());
         request.setPress(map.get("press") == null ? "" : map.get("press").toString());
-        request.setPubDate(map.get("pubDate") == null ? "" : map.get("pubDate").toString());
+        //出版日期
+        String pubDate = map.get("pubDate") == null ? "" : map.get("pubDate").toString();
+        request.setPubDate(DateUtilsUtils.formatToDateString(pubDate,"yyyy-MM-dd"));
 
         request.setBinding(map.get("binding") == null || StringUtils.isEmpty(map.get("binding").toString()) ? "平装" : map.get("binding").toString());
         request.setOtherName(map.get("otherName") == null ? "" : map.get("otherName").toString());
